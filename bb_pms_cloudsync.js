@@ -1,4 +1,4 @@
-// bb_pms_cloudsync.js — FIX v3: dual-CDN fallback (jsDelivr -> Microsoft CDN), lazy init, cookie storage
+// bb_pms_cloudsync.js — FIX v3 + DEBUG EXPORTS (window.cloudSave/cloudLoad/getCloudMeta, window.cloudETag)
 (function(){
   const CDN_JSDELIVR = "https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.2/dist/msal-browser.min.js";
   const CDN_MS = "https://alcdn.msauth.net/browser/2.38.2/js/msal-browser.min.js"; // Microsoft CDN
@@ -9,7 +9,7 @@
 
   let msalInstance = null;
   let msalReady = false;
-  let cloudETag = null;
+  let cloudETag = null; // <-- keep local
   let syncDebounceTimer = null;
   let autoRefreshTimer = null;
 
@@ -20,8 +20,7 @@
     return new Promise((res, rej)=>{
       if (document.querySelector(`script[src='${src}']`)) { res(); return; }
       const s=document.createElement('script');
-      s.src=src; s.defer=true; // defer to guarantee execution order
-      s.onload=res; s.onerror=()=>rej(new Error('load_failed:'+src));
+      s.src=src; s.defer=true; s.onload=res; s.onerror=()=>rej(new Error('load_failed:'+src));
       document.head.appendChild(s);
     });
   }
@@ -31,7 +30,6 @@
     for (const url of order){
       try{
         await injectScript(url);
-        // attende che il browser esegua il bundle e pubblichi window.msal
         for (let i=0;i<20;i++){ if (window.msal) return url; await delay(25); }
       }catch(e){ console.warn('MSAL load error:', e && e.message || e); }
     }
@@ -96,9 +94,9 @@
 
   async function ensureFolderUnderRoot(token,path){ let r=await fetch(`${GRAPH_BASE}/me/drive/root:/${encodeURIComponent(path)}`,{headers:{Authorization:`Bearer ${token}`}}); if(r.status===404){ const parts=path.split('/'); let cur=''; for(const p of parts){ cur=cur?(cur+'/'+p):p; let rr=await fetch(`${GRAPH_BASE}/me/drive/root:/${encodeURIComponent(cur)}`,{headers:{Authorization:`Bearer ${token}`}}); if(rr.status===404){ rr=await fetch(`${GRAPH_BASE}/me/drive/root/children`,{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({name:p, folder:{}, '@microsoft.graph.conflictBehavior':'replace'})}); if(!rr.ok) throw new Error('create_folder '+cur+' '+rr.status); } } r=await fetch(`${GRAPH_BASE}/me/drive/root:/${encodeURIComponent(path)}`,{headers:{Authorization:`Bearer ${token}`}}); } if(!r.ok) throw new Error('ensureFolder '+path+' '+r.status); return r.json(); }
 
-  async function cloudLoad(){ const token=await getToken(); try{ await getAppRoot(token); const metaRes=await fetch(`${GRAPH_BASE}/me/drive/special/approot:/${CLOUD_FILE_NAME}`,{headers:{Authorization:`Bearer ${token}`}}); if(metaRes.status===404){ cloudETag=null; updateStatus(); return null; } if(!metaRes.ok) throw new Error('meta '+metaRes.status); const meta=await metaRes.json(); cloudETag=meta.eTag||meta['@odata.etag']||null; const r=await fetch(`${GRAPH_BASE}/me/drive/special/approot:/${CLOUD_FILE_NAME}:/content`,{headers:{Authorization:`Bearer ${token}`}}); if(!r.ok) throw new Error('download '+r.status); const json=await r.json(); if(json&&json.payload){ window.state=json.payload; if(typeof window.saveState==='function') window.saveState(window.state); } updateStatus(); return json; }catch(e){ console.warn('AppFolder load fallita, provo fallback cartella dedicata', e); } const folder=await ensureFolderUnderRoot(token,'Apps/BB-California-PMS'); const url=`${GRAPH_BASE}/me/drive/items/${folder.id}:/${CLOUD_FILE_NAME}`; const m2=await fetch(url,{headers:{Authorization:`Bearer ${token}`}}); if(m2.status===404){ cloudETag=null; updateStatus(); return null; } if(!m2.ok) throw new Error('meta2 '+m2.status); const meta2=await m2.json(); cloudETag=meta2.eTag||meta2['@odata.etag']||null; const r2=await fetch(`${url}:/content`,{headers:{Authorization:`Bearer ${token}`}}); if(!r2.ok) throw new Error('download2 '+r2.status); const json2=await r2.json(); if(json2&&json2.payload){ window.state=json2.payload; if(typeof window.saveState==='function') window.saveState(window.state); } updateStatus(); return json2; }
+  async function cloudLoad(){ const token=await getToken(); try{ await getAppRoot(token); const metaRes=await fetch(`${GRAPH_BASE}/me/drive/special/approot:/${CLOUD_FILE_NAME}`,{headers:{Authorization:`Bearer ${token}`}}); if(metaRes.status===404){ cloudETag=null; window.cloudETag = cloudETag; return null; } if(!metaRes.ok) throw new Error('meta '+metaRes.status); const meta=await metaRes.json(); cloudETag=meta.eTag||meta['@odata.etag']||null; window.cloudETag = cloudETag; const r=await fetch(`${GRAPH_BASE}/me/drive/special/approot:/${CLOUD_FILE_NAME}:/content`,{headers:{Authorization:`Bearer ${token}`}}); if(!r.ok) throw new Error('download '+r.status); const json=await r.json(); if(json&&json.payload){ window.state=json.payload; if(typeof window.saveState==='function') window.saveState(window.state); } return json; }catch(e){ console.warn('AppFolder load fallita, provo fallback cartella dedicata', e); } const folder=await ensureFolderUnderRoot(token,'Apps/BB-California-PMS'); const url=`${GRAPH_BASE}/me/drive/items/${folder.id}:/${CLOUD_FILE_NAME}`; const m2=await fetch(url,{headers:{Authorization:`Bearer ${token}`}}); if(m2.status===404){ cloudETag=null; window.cloudETag = cloudETag; return null; } if(!m2.ok) throw new Error('meta2 '+m2.status); const meta2=await m2.json(); cloudETag=meta2.eTag||meta2['@odata.etag']||null; window.cloudETag = cloudETag; const r2=await fetch(`${url}:/content`,{headers:{Authorization:`Bearer ${token}`}}); if(!r2.ok) throw new Error('download2 '+r2.status); const json2=await r2.json(); if(json2&&json2.payload){ window.state=json2.payload; if(typeof window.saveState==='function') window.saveState(window.state); } return json2; }
 
-  async function cloudSave(force){ const token=await getToken(); const envelope={version:1, updatedAt:nowISO(), payload:window.state}; const body=JSON.stringify(envelope); try{ await getAppRoot(token); const url=`${GRAPH_BASE}/me/drive/special/approot:/${CLOUD_FILE_NAME}:/content`; const headers={Authorization:`Bearer ${token}`,'Content-Type':'application/json'}; if(cloudETag && !force) headers['If-Match']=cloudETag; let r=await fetch(url,{method:'PUT', headers, body}); if(r.status===412 && !force){ await cloudLoad(); return false; } if(!r.ok) throw new Error('upload '+r.status); const meta=await r.json(); cloudETag=meta.eTag||meta['@odata.etag']||null; await maybeAutoBackup(token,envelope); updateStatus('Cloud: sincronizzato'); return true; }catch(e){ console.warn('AppFolder save fallita, provo fallback', e); } const folder=await ensureFolderUnderRoot(token,'Apps/BB-California-PMS'); const url2=`${GRAPH_BASE}/me/drive/items/${folder.id}:/${CLOUD_FILE_NAME}:/content`; const headers2={Authorization:`Bearer ${token}`,'Content-Type':'application/json'}; if(cloudETag && !force) headers2['If-Match']=cloudETag; let r2=await fetch(url2,{method:'PUT', headers: headers2, body}); if(r2.status===412 && !force){ await cloudLoad(); return false; } if(!r2.ok) throw new Error('upload2 '+r2.status); const meta2=await r2.json(); cloudETag=meta2.eTag||meta2['@odata.etag']||null; await maybeAutoBackup(token,envelope); updateStatus('Cloud: sincronizzato'); return true; }
+  async function cloudSave(force){ const token=await getToken(); const envelope={version:1, updatedAt:nowISO(), payload:window.state}; const body=JSON.stringify(envelope); try{ await getAppRoot(token); const url=`${GRAPH_BASE}/me/drive/special/approot:/${CLOUD_FILE_NAME}:/content`; const headers={Authorization:`Bearer ${token}`,'Content-Type':'application/json'}; if(cloudETag && !force) headers['If-Match']=cloudETag; let r=await fetch(url,{method:'PUT', headers, body}); if(r.status===412 && !force){ await cloudLoad(); return false; } if(!r.ok) throw new Error('upload '+r.status); const meta=await r.json(); cloudETag=meta.eTag||meta['@odata.etag']||null; window.cloudETag = cloudETag; await maybeAutoBackup(token,envelope); updateStatus('Cloud: sincronizzato'); return true; }catch(e){ console.warn('AppFolder save fallita, provo fallback', e); } const folder=await ensureFolderUnderRoot(token,'Apps/BB-California-PMS'); const url2=`${GRAPH_BASE}/me/drive/items/${folder.id}:/${CLOUD_FILE_NAME}:/content`; const headers2={Authorization:`Bearer ${token}`,'Content-Type':'application/json'}; if(cloudETag && !force) headers2['If-Match']=cloudETag; let r2=await fetch(url2,{method:'PUT', headers: headers2, body}); if(r2.status===412 && !force){ await cloudLoad(); return false; } if(!r2.ok) throw new Error('upload2 '+r2.status); const meta2=await r2.json(); cloudETag=meta2.eTag||meta2['@odata.etag']||null; window.cloudETag = cloudETag; await maybeAutoBackup(token,envelope); updateStatus('Cloud: sincronizzato'); return true; }
 
   async function ensureBackupFolder(token){ try{ await getAppRoot(token); let r=await fetch(`${GRAPH_BASE}/me/drive/special/approot:/Backups`,{headers:{Authorization:`Bearer ${token}`}}); if(r.status===404){ r=await fetch(`${GRAPH_BASE}/me/drive/special/approot/children`,{method:'POST', headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'}, body: JSON.stringify({ name: 'Backups', folder:{}, '@microsoft.graph.conflictBehavior':'replace' })}); } if(!r.ok) throw new Error('ensure_backups '+r.status); return 'approot'; }catch(e){} await ensureFolderUnderRoot(token,'Apps/BB-California-PMS/Backups'); return 'root'; }
 
@@ -115,4 +113,14 @@
   document.addEventListener('DOMContentLoaded', async ()=>{
     try{ ensureToolbar(); const ok = await ensureMsal(); if (ok) patchSaveState(); }catch(e){ console.error('CloudSync boot error', e); }
   });
+
+  // === DEBUG/INSPECT EXPORTS ===
+  window.cloudSave = cloudSave;
+  window.cloudLoad = cloudLoad;
+  window.getCloudMeta = function(){
+    try{
+      const acc = (msalInstance && msalInstance.getAllAccounts) ? msalInstance.getAllAccounts()[0] : null;
+      return { eTag: (typeof window.cloudETag !== 'undefined') ? window.cloudETag : null, msalReady, connected: !!acc, account: acc ? (acc.name || acc.username) : null };
+    }catch(e){ return { eTag: null, msalReady: false, connected: false, account: null }; }
+  };
 })();
