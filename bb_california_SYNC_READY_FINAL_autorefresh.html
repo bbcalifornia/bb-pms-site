@@ -1120,5 +1120,66 @@ function upsertBooking(data){
 })();
 </script>
 
-<script src="bb_pms_cloudsync.js"></script></body>
+<script src="bb_pms_cloudsync.js?v=4"></script></body>
+  <!-- DEBUG: Indicatore Ultimo cloud / eTag + Forza salvataggio -->
+<script>
+  (function(){
+    function addCloudDebug(){
+      var bar = document.querySelector('#cloudToolbar');
+      if(!bar || document.getElementById('cloudDebug')) return;
+
+      var d = document.createElement('div');
+      d.id = 'cloudDebug';
+      d.className = 'small text-muted';
+      d.style.marginLeft = '12px';
+      d.innerHTML = 'Ultimo cloud: <span id="cdUpdated">—</span> · eTag: <span id="cdETag">—</span> ' +
+                    '<button id="cdForce" class="btn btn-sm btn-outline-secondary ms-2">Forza salvataggio (debug)</button>';
+      bar.appendChild(d);
+
+      document.getElementById('cdForce').onclick = async function(){
+        try {
+          if (typeof window.cloudSave !== 'function') throw new Error('cloudSave non disponibile');
+          await window.cloudSave(true);
+          localStorage.setItem('bb_pms_last_cloud_updatedAt', new Date().toISOString());
+          alert('Salvato su cloud.');
+          update();
+        } catch(e){
+          alert('Errore salvataggio: ' + e.message);
+        }
+      };
+
+      function update(){
+        try{
+          var meta = (typeof window.getCloudMeta === 'function') ? window.getCloudMeta() : {};
+          var e = meta.eTag || '—';
+          var u = (window.state && window.state.__updatedAt) ||
+                  localStorage.getItem('bb_pms_last_cloud_updatedAt') || '—';
+          document.getElementById('cdETag').textContent = e;
+          document.getElementById('cdUpdated').textContent = u;
+        }catch(_){ }
+      }
+
+      update();
+      setInterval(update, 5000);
+    }
+
+    (function patchCloudSaveTimestamp(){
+      if (typeof window.cloudSave !== 'function') { setTimeout(patchCloudSaveTimestamp, 800); return; }
+      if (window.cloudSave.__patched) return;
+      var _cs = window.cloudSave;
+      window.cloudSave = async function(force){
+        var ok = await _cs(force);
+        try {
+          var now = new Date().toISOString();
+          if (window.state) window.state.__updatedAt = now;
+          localStorage.setItem('bb_pms_last_cloud_updatedAt', now);
+        } catch(_){ }
+        return ok;
+      };
+      window.cloudSave.__patched = true;
+    })();
+
+    document.addEventListener('DOMContentLoaded', addCloudDebug);
+  })();
+</script>
 </html>
