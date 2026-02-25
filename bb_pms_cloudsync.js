@@ -1,4 +1,7 @@
-// bb_pms_cloudsync.js — FINAL PATCH: explicit payload (rooms/guests/bookings) + safe load
+// bb_pms_cloudsync.js — FINAL PATCH v2:
+//  - explicit payload (rooms/guests/bookings)
+//  - NON-DESTRUCTIVE load: non sovrascrive gli array locali con array vuoti dal cloud
+//  - aggiorna window.cloudETag e window.state.__updatedAt dopo upload
 (function(){
   const CDN_JSDELIVR = "https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.2/dist/msal-browser.min.js";
   const CDN_MS = "https://alcdn.msauth.net/browser/2.38.2/js/msal-browser.min.js"; // Microsoft CDN
@@ -92,7 +95,11 @@
 
   async function getAppRoot(token){ const r=await fetch(`${GRAPH_BASE}/me/drive/special/approot`,{headers:{Authorization:`Bearer ${token}`}}); if(!r.ok) throw new Error('approot '+r.status); return r.json(); }
 
-  async function ensureFolderUnderRoot(token,path){ let r=await fetch(`${GRAPH_BASE}/me/drive/root:/${encodeURIComponent(path)}`,{headers:{Authorization:`Bearer ${token}`}}); if(r.status===404){ const parts=path.split('/'); let cur=''; for(const p of parts){ cur=cur?(cur+'/'+p):p; let rr=await fetch(`${GRAPH_BASE}/me/drive/root:/${encodeURIComponent(cur)}`,{headers:{Authorization:`Bearer ${token}`}}); if(rr.status===404){ rr=await fetch(`${GRAPH_BASE}/me/drive/root/children`,{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({name:p, folder:{}, '@microsoft.graph.conflictBehavior':'replace'})}); if(!rr.ok) throw new Error('create_folder '+cur+' '+rr.status); } } r=await fetch(`${GRAPH_BASE}/me/drive/root:/${encodeURIComponent(path)}`,{headers:{Authorization:`Bearer ${token}`}}); } if(!r.ok) throw new Error('ensureFolder '+path+' '+r.status); return r.json(); }
+  function mergeArraySafe(currentArr, incomingArr){
+    const cur = Array.isArray(currentArr) ? currentArr : [];
+    if (Array.isArray(incomingArr) && incomingArr.length > 0) return incomingArr; // usa cloud se non vuoto
+    return cur; // altrimenti preserva il locale
+  }
 
   async function cloudLoad(){ const token=await getToken();
     // AppFolder first
@@ -107,9 +114,9 @@
       const json=await r.json();
       if(json && json.payload){
         const payload=json.payload||{}; window.state=window.state||{};
-        window.state.rooms    = Array.isArray(payload.rooms)    ? payload.rooms    : (window.state.rooms    || []);
-        window.state.guests   = Array.isArray(payload.guests)   ? payload.guests   : (window.state.guests   || []);
-        window.state.bookings = Array.isArray(payload.bookings) ? payload.bookings : (window.state.bookings || []);
+        window.state.rooms    = mergeArraySafe(window.state.rooms,    payload.rooms);
+        window.state.guests   = mergeArraySafe(window.state.guests,   payload.guests);
+        window.state.bookings = mergeArraySafe(window.state.bookings, payload.bookings);
         try{ window.state.__updatedAt = json.updatedAt || window.state.__updatedAt; }catch{}
         if(typeof window.saveState==='function') window.saveState(window.state);
       }
@@ -127,17 +134,37 @@
     const json2=await r2.json();
     if(json2 && json2.payload){
       const payload=json2.payload||{}; window.state=window.state||{};
-      window.state.rooms    = Array.isArray(payload.rooms)    ? payload.rooms    : (window.state.rooms    || []);
-      window.state.guests   = Array.isArray(payload.guests)   ? payload.guests   : (window.state.guests   || []);
-      window.state.bookings = Array.isArray(payload.bookings) ? payload.bookings : (window.state.bookings || []);
+      window.state.rooms    = mergeArraySafe(window.state.rooms,    payload.rooms);
+      window.state.guests   = mergeArraySafe(window.state.guests,   payload.guests);
+      window.state.bookings = mergeArraySafe(window.state.bookings, payload.bookings);
       try{ window.state.__updatedAt = json2.updatedAt || window.state.__updatedAt; }catch{}
       if(typeof window.saveState==='function') window.saveState(window.state);
     }
     return json2;
   }
 
+  async function ensureFolderUnderRoot(token,path){
+    let r=await fetch(`${GRAPH_BASE}/me/drive/root:/${encodeURIComponent(path)}`,{headers:{Authorization:`Bearer ${token}`}});
+    if(r.status===404){
+      const parts=path.split('/'); let cur='';
+      for(const p of parts){
+        cur=cur?(cur+'/'+p):p;
+        let rr=await fetch(`${GRAPH_BASE}/me/drive/root:/${encodeURIComponent(cur)}`,{headers:{Authorization:`Bearer ${token}`}});
+        if(rr.status===404){
+          rr=await fetch(`${GRAPH_BASE}/me/drive/root/children`,{
+            method:'POST', headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
+            body:JSON.stringify({name:p, folder:{}, '@microsoft.graph.conflictBehavior':'replace'})
+          });
+          if(!rr.ok) throw new Error('create_folder '+cur+' '+rr.status);
+        }
+      }
+      r=await fetch(`${GRAPH_BASE}/me/drive/root:/${encodeURIComponent(path)}`,{headers:{Authorization:`Bearer ${token}`}});
+    }
+    if(!r.ok) throw new Error('ensureFolder '+path+' '+r.status);
+    return r.json();
+  }
+
   async function cloudSave(force){ const token=await getToken();
-    // --- explicit payload ---
     const payload={
       rooms: Array.isArray(window.state?.rooms)? window.state.rooms : [],
       guests: Array.isArray(window.state?.guests)? window.state.guests : [],
