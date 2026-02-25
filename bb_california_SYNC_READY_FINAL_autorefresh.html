@@ -1,13 +1,12 @@
-<!DOCTYPE html>
-
+<!doctype html>
 <html lang="it">
 <head>
-<meta charset="utf-8"/>
-<meta content="width=device-width,initial-scale=1" name="viewport"/>
-<title>B&amp;B California · PMS (Web)</title>
-<link href="https://cdn.jsdelivr.net" rel="preconnect"/>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>B&B California · PMS (Web)</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
 <style>
   :root{
     --col-prim:#0ea5a6;
@@ -156,387 +155,407 @@
 </head>
 <body class="p-3" id="body">
 <!-- === TOPBAR + SIDEBAR (OFFCANVAS) === -->
-<div class="d-flex align-items-center gap-2 p-2 border-bottom" id="topbar">
-<button aria-controls="appSidebar" class="btn btn-outline-primary btn-sm" data-bs-target="#appSidebar" data-bs-toggle="offcanvas" type="button">
-<i class="bi bi-list"></i>
-</button>
-<div class="fw-bold d-lg-none">Menu</div>
-<div class="fw-bold d-none d-lg-block">B&amp;B California</div>
+<div id="topbar" class="d-flex align-items-center gap-2 p-2 border-bottom">
+  <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="offcanvas" data-bs-target="#appSidebar" aria-controls="appSidebar">
+    <i class="bi bi-list"></i>
+  </button>
+  <div class="fw-bold d-lg-none">Menu</div>
+  <div class="fw-bold d-none d-lg-block">B&amp;B California</div>
 </div>
-<div aria-labelledby="appSidebarLabel" class="offcanvas offcanvas-start" id="appSidebar" tabindex="-1">
-<div class="offcanvas-header">
-<h5 class="offcanvas-title" id="appSidebarLabel">B&amp;B California</h5>
-<button aria-label="Close" class="btn-close" data-bs-dismiss="offcanvas" type="button"></button>
-</div>
-<div class="offcanvas-body sidebar-offcanvas d-flex flex-column gap-3">
-<div class="list-group">
-<a class="list-group-item list-group-item-action" data-bs-dismiss="offcanvas" onclick="try{renderDashboard();show(viewDashboard);}catch(e){}">
-<i class="bi bi-speedometer2 text-primary"></i> Dashboard
+
+<div class="offcanvas offcanvas-start" tabindex="-1" id="appSidebar" aria-labelledby="appSidebarLabel">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title" id="appSidebarLabel">B&amp;B California</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body sidebar-offcanvas d-flex flex-column gap-3">
+    <div class="list-group">
+      <a class="list-group-item list-group-item-action" onclick="try{renderDashboard();show(viewDashboard);}catch(e){}" data-bs-dismiss="offcanvas">
+        <i class="bi bi-speedometer2 text-primary"></i> Dashboard
       </a>
-<a class="list-group-item list-group-item-action" data-bs-dismiss="offcanvas" onclick="try{renderCalendar();show(viewCalendar);}catch(e){}">
-<i class="bi bi-calendar-event text-info"></i> Calendario
+      <a class="list-group-item list-group-item-action" onclick="try{renderCalendar();show(viewCalendar);}catch(e){}" data-bs-dismiss="offcanvas">
+        <i class="bi bi-calendar-event text-info"></i> Calendario
       </a>
-<a class="list-group-item list-group-item-action" data-bs-dismiss="offcanvas" onclick="try{presetBookingsFilter();renderBookingsTable();show(viewBookings);}catch(e){}">
-<i class="bi bi-journal-text text-success"></i> Prenotazioni
+      <a class="list-group-item list-group-item-action" onclick="try{presetBookingsFilter();renderBookingsTable();show(viewBookings);}catch(e){}" data-bs-dismiss="offcanvas">
+        <i class="bi bi-journal-text text-success"></i> Prenotazioni
       </a>
-<a class="list-group-item list-group-item-action" data-bs-dismiss="offcanvas" onclick="try{presetReportDates();show(viewReports);setTimeout(()=&gt;computeReport(),0);}catch(e){}">
-<i class="bi bi-graph-up text-warning"></i> Report
+      <a class="list-group-item list-group-item-action" onclick="try{presetReportDates();show(viewReports);setTimeout(()=>computeReport(),0);}catch(e){}" data-bs-dismiss="offcanvas">
+        <i class="bi bi-graph-up text-warning"></i> Report
       </a>
-<a class="list-group-item list-group-item-action" data-bs-dismiss="offcanvas" onclick="try{renderRooms();show(viewRooms);}catch(e){}">
-<i class="bi bi-door-closed text-danger"></i> Camere
+      <a class="list-group-item list-group-item-action" onclick="try{renderRooms();show(viewRooms);}catch(e){}" data-bs-dismiss="offcanvas">
+        <i class="bi bi-door-closed text-danger"></i> Camere
       </a>
-<a class="list-group-item list-group-item-action" data-bs-dismiss="offcanvas" onclick="try{exportExcel();}catch(e){}">
-<i class="bi bi-file-earmark-excel text-success"></i> Esporta Excel
+      <a class="list-group-item list-group-item-action" onclick="try{exportExcel();}catch(e){}" data-bs-dismiss="offcanvas">
+        <i class="bi bi-file-earmark-excel text-success"></i> Esporta Excel
       </a>
+    </div>
+
+    <div>
+      <label class="form-label">Ricerca globale</label>
+      <div class="input-group input-group-sm">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input id="sbSearchInput" class="form-control" placeholder="Cerca ospite/telefono/email/note">
+        <button id="sbSearchBtn" class="btn btn-outline-primary">Cerca</button>
+      </div>
+    </div>
+  </div>
 </div>
-<div>
-<label class="form-label">Ricerca globale</label>
-<div class="input-group input-group-sm">
-<span class="input-group-text"><i class="bi bi-search"></i></span>
-<input class="form-control" id="sbSearchInput" placeholder="Cerca ospite/telefono/email/note"/>
-<button class="btn btn-outline-primary" id="sbSearchBtn">Cerca</button>
-</div>
-</div>
-</div>
-</div>
+
+
 <nav class="mb-3 d-flex gap-2 align-items-center toolbar flex-wrap">
-<span class="navbar-brand mb-0" id="brandArea">
-<img alt="Albergo California logo" id="brandLogo"/>
-<span class="hide-xs" id="brandText">B&amp;B California</span>
-</span>
-<button class="btn btn-sm btn-outline-primary" id="btnDashboard"><i class="bi bi-speedometer2 text-primary"></i> <span class="hide-xs">Dashboard</span></button>
-<button class="btn btn-sm btn-outline-primary" id="btnCalendar"><i class="bi bi-calendar-event text-info"></i> <span class="hide-xs">Calendario</span></button>
-<button class="btn btn-sm btn-outline-primary" id="btnBookings"><i class="bi bi-journal-text text-success"></i> <span class="hide-xs">Prenotazioni</span></button>
-<div class="btn-group">
-<button class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-display="static" data-bs-toggle="dropdown">
-<i class="bi bi-printer"></i> <span class="hide-xs">Stampe PDF</span>
-</button>
-<ul class="dropdown-menu dropdown-menu-end">
-<li><a class="dropdown-item" href="#" id="printArriviOggi">Arrivi oggi</a></li>
-<li><a class="dropdown-item" href="#" id="printPartenzeOggi">Partenze oggi</a></li>
-<li><a class="dropdown-item" href="#" id="printSituazioneOggi">Situazione camere (oggi)</a></li>
-<li><hr class="dropdown-divider"/></li>
-<li><a class="dropdown-item" href="#" id="printReportPeriodo">Report (periodo corrente)</a></li>
-</ul>
-</div>
-<button class="btn btn-sm btn-outline-primary" id="btnReports"><i class="bi bi-graph-up text-warning"></i> <span class="hide-xs">Report</span></button>
-<button class="btn btn-sm btn-outline-primary" id="btnRooms"><i class="bi bi-door-closed text-danger"></i> <span class="hide-xs">Camere</span></button>
-<div class="ms-auto d-flex align-items-center gap-2 flex-wrap">
-<div class="input-group input-group-sm" style="width:260px;">
-<span class="input-group-text"><i class="bi bi-search"></i></span>
-<input class="form-control" id="globalSearchInput" placeholder="Cerca ospite/telefono/email/note" type="text"/>
-<button class="btn btn-outline-primary" id="globalSearchBtn">Cerca</button>
-</div>
-<div class="btn-group">
-<button class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-display="static" data-bs-toggle="dropdown">
-<i class="bi bi-gear"></i> <span class="hide-xs">Impostazioni</span>
-</button>
-<ul class="dropdown-menu dropdown-menu-end">
-<li><a class="dropdown-item" data-bs-target="#settingsModal" data-bs-toggle="modal" href="#">Logo &amp; Preferenze</a></li>
-</ul>
-</div>
-<button class="btn btn-sm btn-outline-primary" id="btnExport"><i class="bi bi-file-earmark-excel text-success"></i> <span class="hide-xs">Esporta Excel</span></button>
-<button class="btn btn-sm btn-outline-primary" id="btnReset"><i class="bi bi-trash"></i> <span class="hide-xs">Cancella tutto</span></button>
-</div>
+  <span class="navbar-brand mb-0" id="brandArea">
+    <img id="brandLogo" alt="Albergo California logo" />
+    <span class="hide-xs" id="brandText">B&amp;B California</span>
+  </span>
+  <button class="btn btn-sm btn-outline-primary" id="btnDashboard"><i class="bi bi-speedometer2 text-primary"></i> <span class="hide-xs">Dashboard</span></button>
+  <button class="btn btn-sm btn-outline-primary" id="btnCalendar"><i class="bi bi-calendar-event text-info"></i> <span class="hide-xs">Calendario</span></button>
+  <button class="btn btn-sm btn-outline-primary" id="btnBookings"><i class="bi bi-journal-text text-success"></i> <span class="hide-xs">Prenotazioni</span></button>
+  <div class="btn-group">
+    <button class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" data-bs-display="static">
+      <i class="bi bi-printer"></i> <span class="hide-xs">Stampe PDF</span>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end">
+      <li><a class="dropdown-item" href="#" id="printArriviOggi">Arrivi oggi</a></li>
+      <li><a class="dropdown-item" href="#" id="printPartenzeOggi">Partenze oggi</a></li>
+      <li><a class="dropdown-item" href="#" id="printSituazioneOggi">Situazione camere (oggi)</a></li>
+      <li><hr class="dropdown-divider"></li>
+      <li><a class="dropdown-item" href="#" id="printReportPeriodo">Report (periodo corrente)</a></li>
+    </ul>
+  </div>
+  <button class="btn btn-sm btn-outline-primary" id="btnReports"><i class="bi bi-graph-up text-warning"></i> <span class="hide-xs">Report</span></button>
+  <button class="btn btn-sm btn-outline-primary" id="btnRooms"><i class="bi bi-door-closed text-danger"></i> <span class="hide-xs">Camere</span></button>
+
+  <div class="ms-auto d-flex align-items-center gap-2 flex-wrap">
+    <div class="input-group input-group-sm" style="width:260px;">
+      <span class="input-group-text"><i class="bi bi-search"></i></span>
+      <input type="text" id="globalSearchInput" class="form-control" placeholder="Cerca ospite/telefono/email/note">
+      <button class="btn btn-outline-primary" id="globalSearchBtn">Cerca</button>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" data-bs-display="static">
+        <i class="bi bi-gear"></i> <span class="hide-xs">Impostazioni</span>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#settingsModal">Logo & Preferenze</a></li>
+      </ul>
+    </div>
+    <button class="btn btn-sm btn-outline-primary" id="btnExport"><i class="bi bi-file-earmark-excel text-success"></i> <span class="hide-xs">Esporta Excel</span></button>
+    <button class="btn btn-sm btn-outline-primary" id="btnReset"><i class="bi bi-trash"></i> <span class="hide-xs">Cancella tutto</span></button>
+  </div>
 </nav>
+
 <div class="container-fluid">
-<!-- DASHBOARD -->
-<section class="d-none" id="viewDashboard">
-<div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2 resp-toolbar">
-<div class="d-flex align-items-center gap-2">
-<h4 class="mb-0">Dashboard</h4>
-<span class="text-muted small" id="todayLabel"></span>
-</div>
-<div class="d-flex gap-2 align-items-center">
-<button class="btn btn-sm btn-outline-primary" id="dashPrev">◀️ Indietro</button>
-<input class="form-control form-control-sm" id="dashDate" style="width: 180px;" type="date"/>
-<button class="btn btn-sm btn-outline-primary" id="dashToday">Oggi</button>
-<button class="btn btn-sm btn-outline-primary" id="dashNext">Avanti ▶️</button>
-</div>
-</div>
-<div class="row g-3 mb-3">
-<div class="col-sm-4"><div class="card p-3 text-center"><div class="fw-bold">Arrivi</div><div class="display-6" id="kpiArrivalsNum">0</div></div></div>
-<div class="col-sm-4"><div class="card p-3 text-center"><div class="fw-bold">Partenze</div><div class="display-6" id="kpiDeparturesNum">0</div></div></div>
-<div class="col-sm-4"><div class="card p-3 text-center"><div class="fw-bold">Camere libere</div><div class="display-6" id="kpiFreeNum">0</div></div></div>
-</div>
-<div class="row g-3">
-<div class="col-lg-4">
-<div class="card p-3">
-<div class="d-flex align-items-center justify-content-between">
-<b class="mb-0">Arrivi</b>
-<span class="badge bg-primary" id="kpiArrivals">0</span>
-</div>
-<div class="table-responsive mt-2">
-<table class="table table-sm mb-0" id="tblArrivi"><thead><tr><th>Ospite</th><th>Camera</th><th>Check‑in</th></tr></thead><tbody></tbody></table>
-</div>
-</div>
-</div>
-<div class="col-lg-4">
-<div class="card p-3">
-<div class="d-flex align-items-center justify-content-between">
-<b class="mb-0">Partenze</b>
-<span class="badge bg-primary" id="kpiDepartures">0</span>
-</div>
-<div class="table-responsive mt-2">
-<table class="table table-sm mb-0" id="tblPartenze"><thead><tr><th>Ospite</th><th>Camera</th><th>Check‑out</th></tr></thead><tbody></tbody></table>
-</div>
-</div>
-</div>
-<div class="col-lg-4">
-<div class="card p-3">
-<div class="d-flex align-items-center justify-content-between">
-<b class="mb-0">Camere da pulire (partenze)</b>
-<span class="badge bg-warning text-dark" id="kpiDirty">0</span>
-</div>
-<div class="table-responsive mt-2">
-<table class="table table-sm mb-2" id="tblDirty"><thead><tr><th>Camera</th><th>Ospite</th><th></th></tr></thead><tbody></tbody></table>
-</div>
-<div class="table-responsive mt-2">
-<div class="small text-muted mb-1">Camere già segnate pulite (giorno selezionato)</div>
-<table class="table table-sm mb-0" id="tblClean"><thead><tr><th>Camera</th><th></th></tr></thead><tbody></tbody></table>
-</div>
-</div>
-</div>
-</div>
-</section>
-<!-- CALENDARIO -->
-<section class="d-none" id="viewCalendar">
-<div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2 resp-toolbar">
-<div class="d-flex align-items-center gap-2">
-<h4 class="mb-0">Calendario</h4>
-<select class="form-select form-select-sm" id="rangeSelect" style="width:auto;">
-<option selected="" value="7">7 giorni</option>
-<option value="14">14 giorni</option>
-<option value="21">21 giorni</option>
-</select>
-</div>
-<div class="d-flex gap-2 align-items-center">
-<button class="btn btn-sm btn-outline-primary" id="prevWeek">◀️ Indietro</button>
-<button class="btn btn-sm btn-outline-primary" id="todayBtn">Oggi</button>
-<button class="btn btn-sm btn-outline-primary" id="nextWeek">Avanti ▶️</button>
-<input class="form-control form-control-sm" id="jumpDate" style="width: 180px;" type="date"/>
-<button class="btn btn-sm btn-primary" id="jumpGo">Vai</button>
-</div>
-</div>
-<p class="note">Clic su “+” per creare, clic su <b>Nome Cognome</b> per <b>modificare</b>, trascina per <b>spostare</b>.</p>
+  <!-- DASHBOARD -->
+  <section id="viewDashboard" class="d-none">
+    <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2 resp-toolbar">
+      <div class="d-flex align-items-center gap-2">
+        <h4 class="mb-0">Dashboard</h4>
+        <span id="todayLabel" class="text-muted small"></span>
+      </div>
+      <div class="d-flex gap-2 align-items-center">
+        <button class="btn btn-sm btn-outline-primary" id="dashPrev">◀️ Indietro</button>
+        <input type="date" class="form-control form-control-sm" style="width: 180px;" id="dashDate">
+        <button class="btn btn-sm btn-outline-primary" id="dashToday">Oggi</button>
+        <button class="btn btn-sm btn-outline-primary" id="dashNext">Avanti ▶️</button>
+      </div>
+    </div>
+    <div class="row g-3 mb-3">
+      <div class="col-sm-4"><div class="card p-3 text-center"><div class="fw-bold">Arrivi</div><div class="display-6" id="kpiArrivalsNum">0</div></div></div>
+      <div class="col-sm-4"><div class="card p-3 text-center"><div class="fw-bold">Partenze</div><div class="display-6" id="kpiDeparturesNum">0</div></div></div>
+      <div class="col-sm-4"><div class="card p-3 text-center"><div class="fw-bold">Camere libere</div><div class="display-6" id="kpiFreeNum">0</div></div></div>
+    </div>
+    <div class="row g-3">
+      <div class="col-lg-4">
+        <div class="card p-3">
+          <div class="d-flex align-items-center justify-content-between">
+            <b class="mb-0">Arrivi</b>
+            <span class="badge bg-primary" id="kpiArrivals">0</span>
+          </div>
+          <div class="table-responsive mt-2">
+            <table class="table table-sm mb-0" id="tblArrivi"><thead><tr><th>Ospite</th><th>Camera</th><th>Check‑in</th></tr></thead><tbody></tbody></table>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card p-3">
+          <div class="d-flex align-items-center justify-content-between">
+            <b class="mb-0">Partenze</b>
+            <span class="badge bg-primary" id="kpiDepartures">0</span>
+          </div>
+          <div class="table-responsive mt-2">
+            <table class="table table-sm mb-0" id="tblPartenze"><thead><tr><th>Ospite</th><th>Camera</th><th>Check‑out</th></tr></thead><tbody></tbody></table>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card p-3">
+          <div class="d-flex align-items-center justify-content-between">
+            <b class="mb-0">Camere da pulire (partenze)</b>
+            <span class="badge bg-warning text-dark" id="kpiDirty">0</span>
+          </div>
+          <div class="table-responsive mt-2">
+            <table class="table table-sm mb-2" id="tblDirty"><thead><tr><th>Camera</th><th>Ospite</th><th></th></tr></thead><tbody></tbody></table>
+          </div>
+          <div class="table-responsive mt-2">
+            <div class="small text-muted mb-1">Camere già segnate pulite (giorno selezionato)</div>
+            <table class="table table-sm mb-0" id="tblClean"><thead><tr><th>Camera</th><th></th></tr></thead><tbody></tbody></table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CALENDARIO -->
+  <section id="viewCalendar" class="d-none">
+    <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2 resp-toolbar">
+      <div class="d-flex align-items-center gap-2">
+        <h4 class="mb-0">Calendario</h4>
+        <select id="rangeSelect" class="form-select form-select-sm" style="width:auto;">
+          <option value="7" selected>7 giorni</option>
+          <option value="14">14 giorni</option>
+          <option value="21">21 giorni</option>
+        </select>
+      </div>
+      <div class="d-flex gap-2 align-items-center">
+        <button class="btn btn-sm btn-outline-primary" id="prevWeek">◀️ Indietro</button>
+        <button class="btn btn-sm btn-outline-primary" id="todayBtn">Oggi</button>
+        <button class="btn btn-sm btn-outline-primary" id="nextWeek">Avanti ▶️</button>
+        <input type="date" class="form-control form-control-sm" style="width: 180px;" id="jumpDate">
+        <button class="btn btn-sm btn-primary" id="jumpGo">Vai</button>
+      </div>
+    </div>
+    <p class="note">Clic su “+” per creare, clic su <b>Nome Cognome</b> per <b>modificare</b>, trascina per <b>spostare</b>.</p>
 <p class="note">Legenda: Rosso = Non pagato; Verde = Pagato; Giallo = Acconto.</p>
-<div class="table-responsive" id="calendarContainer"></div>
-</section>
-<!-- PRENOTAZIONI -->
-<section class="d-none" id="viewBookings">
-<h4>Prenotazioni</h4>
-<form class="row g-3 align-items-end mb-3 resp-toolbar" id="bookingsFilterForm">
-<div class="col-md-3">
-<label class="form-label">Dal</label>
-<input class="form-control" id="bkFrom" type="date"/>
+    <div class="table-responsive" id="calendarContainer"></div>
+  </section>
+
+  <!-- PRENOTAZIONI -->
+  <section id="viewBookings" class="d-none">
+    <h4>Prenotazioni</h4>
+    <form class="row g-3 align-items-end mb-3 resp-toolbar" id="bookingsFilterForm">
+      <div class="col-md-3">
+        <label class="form-label">Dal</label>
+        <input type="date" class="form-control" id="bkFrom">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Al (incluso)</label>
+        <input type="date" class="form-control" id="bkTo">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Pagamento</label>
+        <select class="form-select" id="bkPay">
+          <option value="all">Tutti</option>
+          <option value="paid">Pagato</option>
+          <option value="deposit">Acconto</option>
+          <option value="unpaid">Non pagato</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Sorgente</label>
+        <select class="form-select" id="bkSource">
+          <option value="all">Tutte</option>
+          <option value="Telefono">Telefono</option>
+          <option value="Sito internet">Sito internet</option>
+          <option value="Booking">Booking</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Ospite</label>
+        <input class="form-control" id="bkGuest" placeholder="Nome o cognome">
+      </div>
+      <div class="col-12">
+        <button class="btn btn-primary" type="submit">Filtra</button>
+      </div>
+    </form>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle" id="bookingsTable">
+        <thead><tr><th>#</th><th>Camera</th><th>Ospite</th><th>Check‑in</th><th>Check‑out</th><th>Tariffa totale (€)</th><th>Tariffa giornaliera (€)</th><th>Acconto (€)</th><th>Sorgente</th><th>Pagamento</th><th class="hide-xs">Note</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- REPORT -->
+  <section id="viewReports" class="d-none">
+    <h4>Report</h4>
+    <form class="row g-3 align-items-end mb-3 resp-toolbar" id="reportForm">
+      <div class="col-sm-3">
+        <label class="form-label">Dal</label>
+        <input type="date" class="form-control" id="repFrom">
+      </div>
+      <div class="col-sm-3">
+        <label class="form-label">Al (incluso)</label>
+        <input type="date" class="form-control" id="repTo">
+      </div>
+      <div class="col-sm-3">
+        <label class="form-label">Pagamento</label>
+        <select id="repPayFilter" class="form-select">
+          <option value="all">Tutti</option>
+          <option value="paid">Pagato</option>
+          <option value="deposit">Acconto</option>
+          <option value="unpaid">Non pagato</option>
+        </select>
+      </div>
+      <div class="col-sm-3">
+        <button type="submit" class="btn btn-primary">Calcola</button>
+      </div>
+    </form>
+
+    <!-- ORDINE: Non pagato €, Totale prenotazioni €, Ricavi totali € -->
+    <div class="row g-3 mb-3">
+      <div class="col-md-4"><div class="card p-3"><b>Non pagato €</b><div class="fs-4">€ <span id="repOutstanding">0.00</span></div></div></div>
+      <div class="col-md-4"><div class="card p-3"><b>Totale prenotazioni €</b><div class="fs-4">€ <span id="repTotalAll">0.00</span></div></div></div>
+      <div class="col-md-4"><div class="card p-3"><b>Ricavi totali €</b><div class="fs-4">€ <span id="repRevenue">0.00</span></div></div></div>
+    </div>
+
+    <div class="alert alert-info" role="alert">
+      <div class="fw-bold mb-1">Legenda KPI</div>
+      <ul class="mb-0">
+        <li><b>Ricavi totali €</b>: somme <u>effettivamente incassate</u> nel periodo (Pagato = 100% del totale; Acconto = solo importo acconto; Non pagato = 0).</li>
+        <li><b>Totale prenotazioni €</b>: somma di <u>tutti i totali</u> delle prenotazioni nel periodo (pagate e non).</li>
+        <li><b>Non pagato €</b>: importo <u>ancora da incassare</u> (Non pagato = 100% del totale; Acconto = Totale − Acconto; Pagato = 0).</li>
+        <li class="mt-1"><b>Incassi effettivi (grafico)</b>: attribuiti alla <u>data di check‑in</u> della prenotazione (senza data incasso puntuale).</li>
+      </ul>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-xl-6">
+        <div class="card p-3 chart-box">
+          <h6 class="mb-2">Occupazione giornaliera (%)</h6>
+          <canvas id="occChart"></canvas>
+        </div>
+      </div>
+      <div class="col-xl-6">
+        <div class="card p-3 chart-box">
+          <h6 class="mb-2">Incassi effettivi (€)</h6>
+          <canvas id="revChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <h6 class="mt-4">Dettaglio occupazione</h6>
+    <div class="scroll-table">
+      <table class="table table-sm mb-0" id="repTable">
+        <thead><tr><th>Data</th><th>Camere vendute</th><th>Incasso (€)</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <h6 class="mt-4">Sorgenti prenotazione</h6>
+    <div class="table-responsive">
+      <table class="table table-sm" id="repSources">
+        <thead><tr><th>Canale</th><th>Prenotazioni</th><th>Ricavi (€)</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- CAMERE -->
+  <section id="viewRooms" class="d-none">
+    <h4>Gestione Camere</h4>
+    <p class="note">Modifica nome, capacità o stato. I numeri camera partono da <b>1</b> a <b>13</b>. Le camere in <b>Manutenzione/Fuori servizio</b> appaiono <b>rosse</b> nel calendario.</p>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle">
+        <thead><tr><th>#</th><th>Nome</th><th>Capacità</th><th>Stato</th><th></th></tr></thead>
+        <tbody id="roomsBody"></tbody>
+      </table>
+    </div>
+  </section>
 </div>
-<div class="col-md-3">
-<label class="form-label">Al (incluso)</label>
-<input class="form-control" id="bkTo" type="date"/>
-</div>
-<div class="col-md-2">
-<label class="form-label">Pagamento</label>
-<select class="form-select" id="bkPay">
-<option value="all">Tutti</option>
-<option value="paid">Pagato</option>
-<option value="deposit">Acconto</option>
-<option value="unpaid">Non pagato</option>
-</select>
-</div>
-<div class="col-md-2">
-<label class="form-label">Sorgente</label>
-<select class="form-select" id="bkSource">
-<option value="all">Tutte</option>
-<option value="Telefono">Telefono</option>
-<option value="Sito internet">Sito internet</option>
-<option value="Booking">Booking</option>
-</select>
-</div>
-<div class="col-md-2">
-<label class="form-label">Ospite</label>
-<input class="form-control" id="bkGuest" placeholder="Nome o cognome"/>
-</div>
-<div class="col-12">
-<button class="btn btn-primary" type="submit">Filtra</button>
-</div>
-</form>
-<div class="table-responsive">
-<table class="table table-sm align-middle" id="bookingsTable">
-<thead><tr><th>#</th><th>Camera</th><th>Ospite</th><th>Check‑in</th><th>Check‑out</th><th>Tariffa totale (€)</th><th>Tariffa giornaliera (€)</th><th>Acconto (€)</th><th>Sorgente</th><th>Pagamento</th><th class="hide-xs">Note</th><th></th></tr></thead>
-<tbody></tbody>
-</table>
-</div>
-</section>
-<!-- REPORT -->
-<section class="d-none" id="viewReports">
-<h4>Report</h4>
-<form class="row g-3 align-items-end mb-3 resp-toolbar" id="reportForm">
-<div class="col-sm-3">
-<label class="form-label">Dal</label>
-<input class="form-control" id="repFrom" type="date"/>
-</div>
-<div class="col-sm-3">
-<label class="form-label">Al (incluso)</label>
-<input class="form-control" id="repTo" type="date"/>
-</div>
-<div class="col-sm-3">
-<label class="form-label">Pagamento</label>
-<select class="form-select" id="repPayFilter">
-<option value="all">Tutti</option>
-<option value="paid">Pagato</option>
-<option value="deposit">Acconto</option>
-<option value="unpaid">Non pagato</option>
-</select>
-</div>
-<div class="col-sm-3">
-<button class="btn btn-primary" type="submit">Calcola</button>
-</div>
-</form>
-<!-- ORDINE: Non pagato €, Totale prenotazioni €, Ricavi totali € -->
-<div class="row g-3 mb-3">
-<div class="col-md-4"><div class="card p-3"><b>Non pagato €</b><div class="fs-4">€ <span id="repOutstanding">0.00</span></div></div></div>
-<div class="col-md-4"><div class="card p-3"><b>Totale prenotazioni €</b><div class="fs-4">€ <span id="repTotalAll">0.00</span></div></div></div>
-<div class="col-md-4"><div class="card p-3"><b>Ricavi totali €</b><div class="fs-4">€ <span id="repRevenue">0.00</span></div></div></div>
-</div>
-<div class="alert alert-info" role="alert">
-<div class="fw-bold mb-1">Legenda KPI</div>
-<ul class="mb-0">
-<li><b>Ricavi totali €</b>: somme <u>effettivamente incassate</u> nel periodo (Pagato = 100% del totale; Acconto = solo importo acconto; Non pagato = 0).</li>
-<li><b>Totale prenotazioni €</b>: somma di <u>tutti i totali</u> delle prenotazioni nel periodo (pagate e non).</li>
-<li><b>Non pagato €</b>: importo <u>ancora da incassare</u> (Non pagato = 100% del totale; Acconto = Totale − Acconto; Pagato = 0).</li>
-<li class="mt-1"><b>Incassi effettivi (grafico)</b>: attribuiti alla <u>data di check‑in</u> della prenotazione (senza data incasso puntuale).</li>
-</ul>
-</div>
-<div class="row g-3">
-<div class="col-xl-6">
-<div class="card p-3 chart-box">
-<h6 class="mb-2">Occupazione giornaliera (%)</h6>
-<canvas id="occChart"></canvas>
-</div>
-</div>
-<div class="col-xl-6">
-<div class="card p-3 chart-box">
-<h6 class="mb-2">Incassi effettivi (€)</h6>
-<canvas id="revChart"></canvas>
-</div>
-</div>
-</div>
-<h6 class="mt-4">Dettaglio occupazione</h6>
-<div class="scroll-table">
-<table class="table table-sm mb-0" id="repTable">
-<thead><tr><th>Data</th><th>Camere vendute</th><th>Incasso (€)</th></tr></thead>
-<tbody></tbody>
-</table>
-</div>
-<h6 class="mt-4">Sorgenti prenotazione</h6>
-<div class="table-responsive">
-<table class="table table-sm" id="repSources">
-<thead><tr><th>Canale</th><th>Prenotazioni</th><th>Ricavi (€)</th></tr></thead>
-<tbody></tbody>
-</table>
-</div>
-</section>
-<!-- CAMERE -->
-<section class="d-none" id="viewRooms">
-<h4>Gestione Camere</h4>
-<p class="note">Modifica nome, capacità o stato. I numeri camera partono da <b>1</b> a <b>13</b>. Le camere in <b>Manutenzione/Fuori servizio</b> appaiono <b>rosse</b> nel calendario.</p>
-<div class="table-responsive">
-<table class="table table-sm align-middle">
-<thead><tr><th>#</th><th>Nome</th><th>Capacità</th><th>Stato</th><th></th></tr></thead>
-<tbody id="roomsBody"></tbody>
-</table>
-</div>
-</section>
-</div>
+
 <!-- MODALE PRENOTAZIONE -->
-<div aria-hidden="true" class="modal fade" id="newBookingModal" tabindex="-1">
-<div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
-<div class="modal-header">
-<h5 class="modal-title" id="bookingModalTitle">Nuova prenotazione</h5>
-<button class="btn-close" data-bs-dismiss="modal" type="button"></button>
+<div class="modal fade" id="newBookingModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title" id="bookingModalTitle">Nuova prenotazione</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <form id="newBookingForm" class="modal-body row g-3">
+      <input type="hidden" name="booking_id" />
+      <div class="col-md-3"><label class="form-label">Nome</label><input name="first_name" class="form-control" required></div>
+      <div class="col-md-3"><label class="form-label">Cognome</label><input name="last_name" class="form-control" required></div>
+      <div class="col-md-3"><label class="form-label">Email</label><input name="email" type="email" class="form-control"></div>
+      <div class="col-md-3"><label class="form-label">Telefono</label><input name="phone" class="form-control"></div>
+      <div class="col-md-3"><label class="form-label">Camera</label><select name="room_id" id="roomSelect" class="form-select"></select></div>
+      <div class="col-md-3"><label class="form-label">Check‑in</label><input name="checkin" id="checkinInput" type="date" class="form-control" required></div>
+      <div class="col-md-3"><label class="form-label">Check‑out</label><input name="checkout" id="checkoutInput" type="date" class="form-control" required></div>
+      <div class="col-md-3"><label class="form-label">Pagamento</label><select name="payment_status" id="payment_status" class="form-select"><option value="unpaid">Non pagato</option><option value="deposit">Acconto</option><option value="paid">Pagato</option></select></div>
+      <div class="col-md-3 d-none" id="depositGroup"><label class="form-label">Acconto (€)</label><input name="deposit_amount" id="deposit_amount" type="number" step="0.01" min="0" class="form-control" value="0.00"></div>
+      <div class="col-md-3"><label class="form-label">Sorgente</label><select name="source" class="form-select"><option value="Telefono">Telefono</option><option value="Sito internet">Sito internet</option><option value="Booking">Booking</option></select></div>
+      <div class="col-md-3"><label class="form-label">Tariffa totale (€/soggiorno)</label><input name="rate_total" id="rate_total" type="number" step="0.01" min="0" class="form-control" value="0.00"><div class="invalid-feedback" id="rate_total_fb"></div></div>
+      <div class="col-md-3"><label class="form-label">Tariffa giornaliera (€/notte)</label><input name="rate_daily" id="rate_daily" type="number" step="0.01" min="0" class="form-control" value="0.00"><div class="invalid-feedback" id="rate_daily_fb"></div></div>
+      <div class="col-12"><label class="form-label">Note</label><textarea name="notes" class="form-control" rows="3" placeholder="Es. orario arrivo, allergie, richieste..."></textarea></div>
+    
+      <!-- OMBRELLONE (v2) -->
+      <hr>
+      <div class="col-12">
+        <label class="form-label d-block">Ombrellone</label>
+        <div class="btn-group" role="group" aria-label="Ombrellone">
+          <input type="radio" class="btn-check" name="umbrella_enabled" id="umb_no" value="no" checked>
+          <label class="btn btn-outline-secondary" for="umb_no">No</label>
+          <input type="radio" class="btn-check" name="umbrella_enabled" id="umb_yes" value="yes">
+          <label class="btn btn-outline-secondary" for="umb_yes">Sì</label>
+        </div>
+      </div>
+      <div class="col-12 d-none" id="umbrella_extra">
+        <div class="row g-2">
+          <div class="col-md-4">
+            <label class="form-label">Numero</label>
+            <select name="umbrella_number" id="umbrella_number" class="form-select">
+              <option value="">—</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="6">6</option>
+            </select>
+            <div class=\"invalid-feedback\" id=\"umbrella_number_fb\">Se scegli “Sì”, devi selezionare un numero da 1 a 6.</div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Importo totale (€/soggiorno)</label>
+            <input name="umbrella_total" id="umbrella_total" type="number" step="0.01" min="0" class="form-control" value="0.00">
+            <div class="invalid-feedback" id="umbrella_total_fb"></div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Importo giornaliero (€/giorno)</label>
+            <input name="umbrella_daily" id="umbrella_daily" type="number" step="0.01" min="0" class="form-control" value="0.00">
+            <div class="invalid-feedback" id="umbrella_daily_fb"></div>
+          </div>
+        </div>
+      </div>
+</form>
+    <div class="modal-footer">
+      <button class="btn btn-outline-primary" data-bs-dismiss="modal">Annulla</button>
+      <button class="btn btn-danger d-none" id="deleteBookingBtn"><i class="bi bi-trash"></i> Elimina</button>
+      <button class="btn btn-primary" id="saveBookingBtn" type=\"button\" onclick=\"onSaveBookingClick()\">Salva</button>
+    </div>
+  </div></div>
 </div>
-<form class="modal-body row g-3" id="newBookingForm">
-<input name="booking_id" type="hidden">
-<div class="col-md-3"><label class="form-label">Nome</label><input class="form-control" name="first_name" required=""/></div>
-<div class="col-md-3"><label class="form-label">Cognome</label><input class="form-control" name="last_name" required=""/></div>
-<div class="col-md-3"><label class="form-label">Email</label><input class="form-control" name="email" type="email"/></div>
-<div class="col-md-3"><label class="form-label">Telefono</label><input class="form-control" name="phone"/></div>
-<div class="col-md-3"><label class="form-label">Camera</label><select class="form-select" id="roomSelect" name="room_id"></select></div>
-<div class="col-md-3"><label class="form-label">Check‑in</label><input class="form-control" id="checkinInput" name="checkin" required="" type="date"/></div>
-<div class="col-md-3"><label class="form-label">Check‑out</label><input class="form-control" id="checkoutInput" name="checkout" required="" type="date"/></div>
-<div class="col-md-3"><label class="form-label">Pagamento</label><select class="form-select" id="payment_status" name="payment_status"><option value="unpaid">Non pagato</option><option value="deposit">Acconto</option><option value="paid">Pagato</option></select></div>
-<div class="col-md-3 d-none" id="depositGroup"><label class="form-label">Acconto (€)</label><input class="form-control" id="deposit_amount" min="0" name="deposit_amount" step="0.01" type="number" value="0.00"/></div>
-<div class="col-md-3"><label class="form-label">Sorgente</label><select class="form-select" name="source"><option value="Telefono">Telefono</option><option value="Sito internet">Sito internet</option><option value="Booking">Booking</option></select></div>
-<div class="col-md-3"><label class="form-label">Tariffa totale (€/soggiorno)</label><input class="form-control" id="rate_total" min="0" name="rate_total" step="0.01" type="number" value="0.00"/><div class="invalid-feedback" id="rate_total_fb"></div></div>
-<div class="col-md-3"><label class="form-label">Tariffa giornaliera (€/notte)</label><input class="form-control" id="rate_daily" min="0" name="rate_daily" step="0.01" type="number" value="0.00"/><div class="invalid-feedback" id="rate_daily_fb"></div></div>
-<div class="col-12"><label class="form-label">Note</label><textarea class="form-control" name="notes" placeholder="Es. orario arrivo, allergie, richieste..." rows="3"></textarea></div>
-<!-- OMBRELLONE (v2) -->
-<hr/>
-<div class="col-12">
-<label class="form-label d-block">Ombrellone</label>
-<div aria-label="Ombrellone" class="btn-group" role="group">
-<input checked="" class="btn-check" id="umb_no" name="umbrella_enabled" type="radio" value="no"/>
-<label class="btn btn-outline-secondary" for="umb_no">No</label>
-<input class="btn-check" id="umb_yes" name="umbrella_enabled" type="radio" value="yes"/>
-<label class="btn btn-outline-secondary" for="umb_yes">Sì</label>
-</div>
-</div>
-<div class="col-12 d-none" id="umbrella_extra">
-<div class="row g-2">
-<div class="col-md-4">
-<label class="form-label">Numero</label>
-<select class="form-select" id="umbrella_number" name="umbrella_number">
-<option value="">—</option>
-<option value="1">1</option>
-<option value="2">2</option>
-<option value="3">3</option>
-<option value="4">4</option>
-<option value="5">5</option>
-<option value="6">6</option>
-</select>
-<div class='\"invalid-feedback\"' id='\"umbrella_number_fb\"'>Se scegli “Sì”, devi selezionare un numero da 1 a 6.</div>
-</div>
-<div class="col-md-4">
-<label class="form-label">Importo totale (€/soggiorno)</label>
-<input class="form-control" id="umbrella_total" min="0" name="umbrella_total" step="0.01" type="number" value="0.00"/>
-<div class="invalid-feedback" id="umbrella_total_fb"></div>
-</div>
-<div class="col-md-4">
-<label class="form-label">Importo giornaliero (€/giorno)</label>
-<input class="form-control" id="umbrella_daily" min="0" name="umbrella_daily" step="0.01" type="number" value="0.00"/>
-<div class="invalid-feedback" id="umbrella_daily_fb"></div>
-</div>
-</div>
-</div>
-</input></form>
-<div class="modal-footer">
-<button class="btn btn-outline-primary" data-bs-dismiss="modal">Annulla</button>
-<button class="btn btn-danger d-none" id="deleteBookingBtn"><i class="bi bi-trash"></i> Elimina</button>
-<button class="btn btn-primary" id="saveBookingBtn" onclick='\"onSaveBookingClick()\"' type='\"button\"'>Salva</button>
-</div>
-</div></div>
-</div>
+
 <!-- MODALE IMPOSTAZIONI -->
-<div aria-hidden="true" class="modal fade" id="settingsModal" tabindex="-1">
-<div class="modal-dialog"><div class="modal-content">
-<div class="modal-header"><h5 class="modal-title">Impostazioni</h5><button class="btn-close" data-bs-dismiss="modal" type="button"></button></div>
-<div class="modal-body">
-<div class="mb-3">
-<label class="form-label">URL logo (PNG/SVG/JPG)</label>
-<input class="form-control" id="logoUrlInput" placeholder="https://albergocalifornia.it/path/del/logo.png" type="url"/>
-<div class="form-text">Predefinito: favicon del sito. Incolla qui l'URL del logo per sostituirlo.</div>
+<div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Impostazioni</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <div class="mb-3">
+        <label class="form-label">URL logo (PNG/SVG/JPG)</label>
+        <input type="url" class="form-control" id="logoUrlInput" placeholder="https://albergocalifornia.it/path/del/logo.png">
+        <div class="form-text">Predefinito: favicon del sito. Incolla qui l'URL del logo per sostituirlo.</div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline-primary" data-bs-dismiss="modal">Chiudi</button><button class="btn btn-primary" id="saveSettingsBtn">Salva impostazioni</button></div>
+  </div></div>
 </div>
-</div>
-<div class="modal-footer"><button class="btn btn-outline-primary" data-bs-dismiss="modal">Chiudi</button><button class="btn btn-primary" id="saveSettingsBtn">Salva impostazioni</button></div>
-</div></div>
-</div>
+
 <!-- MODALE RICERCA GLOBALE -->
-<div aria-hidden="true" class="modal fade" id="globalSearchModal" tabindex="-1">
-<div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
-<div class="modal-header"><h5 class="modal-title">Risultati ricerca</h5><button class="btn-close" data-bs-dismiss="modal" type="button"></button></div>
-<div class="modal-body"><div class="table-responsive"><table class="table table-sm" id="globalSearchTable"><thead><tr><th>#</th><th>Ospite</th><th>Periodo</th><th>Camera</th><th>Sorgente</th><th>Pagamento</th><th>Acconto (€)</th><th>Note</th><th></th></tr></thead><tbody></tbody></table></div></div>
-</div></div>
+<div class="modal fade" id="globalSearchModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Risultati ricerca</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body"><div class="table-responsive"><table class="table table-sm" id="globalSearchTable"><thead><tr><th>#</th><th>Ospite</th><th>Periodo</th><th>Camera</th><th>Sorgente</th><th>Pagamento</th><th>Acconto (€)</th><th>Note</th><th></th></tr></thead><tbody></tbody></table></div></div>
+  </div></div>
 </div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -912,6 +931,7 @@ function saveRoom(id){ const inputs=roomsBody.querySelectorAll(`[data-rid=\"${id
 /* AVVIO */
 try{renderDashboard();}catch(e){console.error(e);} try{renderCalendar();}catch(e){console.error(e);} try{renderRooms();}catch(e){console.error(e);} try{presetBookingsFilter(); renderBookingsTable();}catch(e){console.error(e);} show(viewCalendar);
 </script>
+
 <script>
 (function(){
   function enhanceHorizontalScroll(){
@@ -936,6 +956,8 @@ try{renderDashboard();}catch(e){console.error(e);} try{renderCalendar();}catch(e
   });
 })();
 </script>
+
+
 <script>
 // /* KPI reorder runtime */
 (function(){
@@ -958,6 +980,8 @@ try{renderDashboard();}catch(e){console.error(e);} try{renderCalendar();}catch(e
   document.addEventListener('DOMContentLoaded', reorderReportKPI);
 })();
 </script>
+
+
 <script>
 (function(){
   function removeToolbarButtons(){
@@ -1085,6 +1109,8 @@ function upsertBooking(data){
   return true;
 }
 </script>
+
+
 <script>
 // UMBRELLA_REQUIRED_BEHAVIOR
 (function(){
@@ -1120,66 +1146,5 @@ function upsertBooking(data){
 })();
 </script>
 
-<script src="bb_pms_cloudsimple.js?v=1"></script></body>
-  <!-- DEBUG: Indicatore Ultimo cloud / eTag + Forza salvataggio -->
-<script>
-  (function(){
-    function addCloudDebug(){
-      var bar = document.querySelector('#cloudToolbar');
-      if(!bar || document.getElementById('cloudDebug')) return;
-
-      var d = document.createElement('div');
-      d.id = 'cloudDebug';
-      d.className = 'small text-muted';
-      d.style.marginLeft = '12px';
-      d.innerHTML = 'Ultimo cloud: <span id="cdUpdated">—</span> · eTag: <span id="cdETag">—</span> ' +
-                    '<button id="cdForce" class="btn btn-sm btn-outline-secondary ms-2">Forza salvataggio (debug)</button>';
-      bar.appendChild(d);
-
-      document.getElementById('cdForce').onclick = async function(){
-        try {
-          if (typeof window.cloudSave !== 'function') throw new Error('cloudSave non disponibile');
-          await window.cloudSave(true);
-          localStorage.setItem('bb_pms_last_cloud_updatedAt', new Date().toISOString());
-          alert('Salvato su cloud.');
-          update();
-        } catch(e){
-          alert('Errore salvataggio: ' + e.message);
-        }
-      };
-
-      function update(){
-        try{
-          var meta = (typeof window.getCloudMeta === 'function') ? window.getCloudMeta() : {};
-          var e = meta.eTag || '—';
-          var u = (window.state && window.state.__updatedAt) ||
-                  localStorage.getItem('bb_pms_last_cloud_updatedAt') || '—';
-          document.getElementById('cdETag').textContent = e;
-          document.getElementById('cdUpdated').textContent = u;
-        }catch(_){ }
-      }
-
-      update();
-      setInterval(update, 5000);
-    }
-
-    (function patchCloudSaveTimestamp(){
-      if (typeof window.cloudSave !== 'function') { setTimeout(patchCloudSaveTimestamp, 800); return; }
-      if (window.cloudSave.__patched) return;
-      var _cs = window.cloudSave;
-      window.cloudSave = async function(force){
-        var ok = await _cs(force);
-        try {
-          var now = new Date().toISOString();
-          if (window.state) window.state.__updatedAt = now;
-          localStorage.setItem('bb_pms_last_cloud_updatedAt', now);
-        } catch(_){ }
-        return ok;
-      };
-      window.cloudSave.__patched = true;
-    })();
-
-    document.addEventListener('DOMContentLoaded', addCloudDebug);
-  })();
-</script>
+</body>
 </html>
