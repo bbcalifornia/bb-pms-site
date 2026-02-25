@@ -1,6 +1,5 @@
-
-// bb_pms_cloudsync.js (Client ID embedded, auto-refresh every 3 minutes)
-(function(){
+// bb_pms_cloudsync.js — FIX for GitHub Pages + MSAL SPA redirect
+(function () {
   const MSAL_CDN = "https://cdn.jsdelivr.net/npm/@azure/msal-browser@latest/dist/msal-browser.min.js";
   const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
   const CLOUD_FILE_NAME = "bb_california_pms.json";
@@ -11,264 +10,356 @@
   let syncDebounceTimer = null;
   let autoRefreshTimer = null;
 
-  function delay(ms){return new Promise(r=>setTimeout(r,ms));}
-  function nowISO(){return new Date().toISOString();}
-  function injectScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.async=true;s.onload=res;s.onerror=rej;document.head.appendChild(s);});}
-  async function waitForAppReady(t=15000){const t0=Date.now();while(Date.now()-t0<t){if(window.state&&typeof window.saveState==='function')return true;await delay(100);}return false;}
+  function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+  function nowISO() { return new Date().toISOString(); }
 
-  function ensureToolbar(){
-    if(document.getElementById('cloudBar')) return;
-    const bar=document.createElement('div');
-    bar.id='cloudBar';
-    bar.style.cssText='display:flex;gap:.5rem;align-items:center;padding:.5rem;border:1px solid #E2E8F0;border-radius:8px;background:#fff;margin:.5rem 0;';
-    bar.innerHTML=`
-      <span id="cloudStatus" class="small text-muted">Cloud: non connesso</span>
-      <button class="btn btn-sm btn-outline-primary" id="btnSignIn">Accedi</button>
-      <button class="btn btn-sm btn-outline-secondary" id="btnSignOut">Esci</button>
-      <button class="btn btn-sm btn-primary" id="btnSyncNow">Sincronizza ora</button>
-      <div class="dropdown">
-        <button class="btn btn-sm btn-outline-dark dropdown-toggle" type="button" data-bs-toggle="dropdown">Avanzate</button>
-        <ul class="dropdown-menu">
-          <li><a class="dropdown-item" href="#" id="btnCloudLoad">Carica dal cloud (forza)</a></li>
-          <li><a class="dropdown-item" href="#" id="btnExportJSON">Esporta backup JSON</a></li>
-        </ul>
-      </div>`;
-    const anchor=document.querySelector('#topbar')||document.body.firstElementChild;
-    (anchor&&anchor.parentNode?anchor.parentNode:document.body).insertBefore(bar, anchor?anchor.nextSibling:null);
-
-    document.getElementById('btnSignIn').onclick=signIn;
-    document.getElementById('btnSignOut').onclick=()=>{ const acc=msalInstance.getAllAccounts()[0]; msalInstance.logoutPopup({account:acc}); updateStatus(); };
-    document.getElementById('btnSyncNow').onclick=async()=>{ try{ await cloudSave(true); alert('Sync completata'); }catch(e){ alert('Errore sync: '+e.message); } };
-    document.getElementById('btnCloudLoad').onclick=async()=>{ try{ await cloudLoad(); fullRerender(); alert('Dati caricati dal cloud'); }catch(e){ alert('Errore cloud load: '+e.message); } };
-    document.getElementById('btnExportJSON').onclick=exportLocalBackup;
-  }
-
-  function updateStatus(text){
-    const acc = msalInstance && msalInstance.getAllAccounts()[0];
-    const el=document.getElementById('cloudStatus');
-    if(el) el.textContent = text || (acc?(`Cloud: connesso a ${acc.name||acc.username}`):'Cloud: non connesso');
-  }
-
-  function initMsal(){
-    msalInstance = new msal.PublicClientApplication({
-      auth: { clientId: CLIENT_ID, authority: "https://login.microsoftonline.com/common", redirectUri: window.location.origin + "/" },
-      cache: { cacheLocation: "sessionStorage", storeAuthStateInCookie:false }
+  function injectScript(src) {
+    return new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = src;
+      s.async = true;
+      s.onload = res;
+      s.onerror = rej;
+      document.head.appendChild(s);
     });
   }
 
-  async function signIn(){
-    try{
-      const acc=msalInstance.getAllAccounts()[0];
-      const scopes=["User.Read","openid","profile","offline_access","Files.ReadWrite.AppFolder"];
-      if(!acc) await msalInstance.loginPopup({scopes});
+  // Attende che l’app (state/render) sia disponibile
+  async function waitForAppReady(timeoutMs = 15000) {
+    const t0 = Date.now();
+    while (Date.now() - t0 < timeoutMs) {
+      if (window.state && typeof window.saveState === 'function') return true;
+      await delay(100);
+    }
+    return false;
+  }
+
+  // Toolbar con pulsanti cloud
+  function ensureToolbar() {
+    if (document.getElementById('cloudToolbar')) return;
+
+    const bar = document.createElement('div');
+    bar.id = 'cloudToolbar';
+    bar.className = 'd-flex align-items-center gap-2 p-2 border-bottom';
+    bar.style.background = 'rgba(255,255,255,.9)';
+    bar.style.backdropFilter = 'blur(6px)';
+
+    bar.innerHTML = `
+      <div class="d-flex flex-wrap align-items-center gap-2 w-100">
+        <span id="cloudStatus" class="small text-muted">Cloud: non connesso</span>
+        <div class="ms-auto d-flex gap-2">
+          <button id="btnSignIn"  class="btn btn-sm btn-primary">Accedi</button>
+          <button id="btnSignOut" class="btn btn-sm btn-outline-secondary">Esci</button>
+          <button id="btnSyncNow" class="btn btn-sm btn-outline-primary">Sincronizza ora</button>
+          <div class="btn-group">
+            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">Avanzate</button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><a class="dropdown-item" href="#" id="btnCloudLoad">Carica dal cloud (forza)</a></li>
+              <li><a class="dropdown-item" href="#" id="btnExportJSON">Esporta backup JSON</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // inserisci subito sotto il topbar esistente, se presente
+    const anchor = document.querySelector('#topbar') || document.body.firstElementChild;
+    (anchor && anchor.parentNode ? anchor.parentNode : document.body).insertBefore(bar, anchor ? anchor.nextSibling : null);
+
+    document.getElementById('btnSignIn').onclick = signIn;
+    document.getElementById('btnSignOut').onclick = () => {
+      try {
+        const acc = msalInstance.getAllAccounts()[0];
+        msalInstance.logoutPopup({ account: acc });
+      } catch { /* no-op */ }
+      updateStatus();
+    };
+    document.getElementById('btnSyncNow').onclick = async () => {
+      try { await cloudSave(true); alert('Sync completata'); }
+      catch (e) { alert('Errore sync: ' + e.message); }
+    };
+    document.getElementById('btnCloudLoad').onclick = async (e) => {
+      e.preventDefault();
+      try { await cloudLoad(); fullRerender(); alert('Dati caricati dal cloud'); }
+      catch (e2) { alert('Errore cloud load: ' + e2.message); }
+    };
+    document.getElementById('btnExportJSON').onclick = (e) => { e.preventDefault(); exportLocalBackup(); };
+  }
+
+  function updateStatus(text) {
+    const acc = msalInstance && msalInstance.getAllAccounts()[0];
+    const el = document.getElementById('cloudStatus');
+    if (el) el.textContent = text || (acc ? `Cloud: connesso a ${acc.name || acc.username}` : 'Cloud: non connesso');
+  }
+
+  function initMsal() {
+    // 👉 IMPORTANTISSIMO su GitHub Pages: redirectUri deve puntare alla root della tua app
+    const REDIRECT = "https://bbcalifornia.github.io/bb-pms-site/";
+    msalInstance = new msal.PublicClientApplication({
+      auth: {
+        clientId: CLIENT_ID,
+        authority: "https://login.microsoftonline.com/common",
+        redirectUri: REDIRECT
+      },
+      cache: { cacheLocation: "sessionStorage", storeAuthStateInCookie: false }
+    });
+
+    if (typeof msalInstance.handleRedirectPromise === 'function') {
+      msalInstance.handleRedirectPromise().then(() => {
+        updateStatus();
+      }).catch(console.warn);
+    }
+  }
+
+  async function signIn() {
+    try {
+      const acc = msalInstance.getAllAccounts()[0];
+      const scopes = ["User.Read", "openid", "profile", "offline_access", "Files.ReadWrite.AppFolder"];
+      if (!acc) await msalInstance.loginPopup({ scopes });
       updateStatus();
       await cloudLoad();
       fullRerender();
       startAutoRefresh();
-    }catch(e){ console.error(e); alert('Login/Cloud load fallito: '+e.message); }
+    } catch (e) {
+      console.error(e);
+      alert('Login/Cloud load fallito: ' + e.message);
+    }
   }
 
-  function startAutoRefresh(){
-    try{ if(autoRefreshTimer) clearInterval(autoRefreshTimer); }catch(e){}
-    autoRefreshTimer = setInterval(async ()=>{
-      try{
+  function startAutoRefresh() {
+    try { if (autoRefreshTimer) clearInterval(autoRefreshTimer); } catch { /* no-op */ }
+    autoRefreshTimer = setInterval(async () => {
+      try {
         const prevETag = cloudETag;
         const data = await cloudLoad();
-        if(data && cloudETag !== prevETag){ fullRerender(); }
-      }catch(e){ console.warn('Auto-refresh error:', e); }
-    }, 3*60*1000);
+        if (data && cloudETag !== prevETag) { fullRerender(); }
+      } catch (e) {
+        console.warn('Auto-refresh error:', e);
+      }
+    }, 3 * 60 * 1000);
   }
 
-  async function getToken(scopes){
-    scopes=scopes||["User.Read","openid","profile","offline_access","Files.ReadWrite.AppFolder"];
-    try{
-      const acc=msalInstance.getAllAccounts()[0];
-      if(!acc) throw new Error('no_account');
-      const res=await msalInstance.acquireTokenSilent({scopes,account:acc});
+  async function getToken(scopes) {
+    scopes = scopes || ["User.Read", "openid", "profile", "offline_access", "Files.ReadWrite.AppFolder"];
+    try {
+      const acc = msalInstance.getAllAccounts()[0];
+      if (!acc) throw new Error('no_account');
+      const res = await msalInstance.acquireTokenSilent({ scopes, account: acc });
       return res.accessToken;
-    }catch(e){
-      const res=await msalInstance.acquireTokenPopup({scopes});
+    } catch (e) {
+      const res = await msalInstance.acquireTokenPopup({ scopes });
       return res.accessToken;
     }
   }
 
-  async function getAppRoot(token){
-    const r=await fetch(`${GRAPH_BASE}/me/drive/special/approot`,{headers:{Authorization:`Bearer ${token}`}});
-    if(!r.ok) throw new Error('approot '+r.status);
+  async function getAppRoot(token) {
+    const r = await fetch(`${GRAPH_BASE}/me/drive/special/approot`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!r.ok) throw new Error('approot ' + r.status);
     return r.json();
   }
 
-  async function ensureFolderUnderRoot(token,path){
-    let r=await fetch(`${GRAPH_BASE}/me/drive/root:/${encodeURIComponent(path)}`,{headers:{Authorization:`Bearer ${token}`}});
-    if(r.status===404){
-      const parts=path.split('/'); let cur='';
-      for(const p of parts){
-        cur = cur? (cur+'/'+p):p;
-        let rr=await fetch(`${GRAPH_BASE}/me/drive/root:/${encodeURIComponent(cur)}`,{headers:{Authorization:`Bearer ${token}`}});
-        if(rr.status===404){
-          rr=await fetch(`${GRAPH_BASE}/me/drive/root/children`,{method:'POST', headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'}, body:JSON.stringify({name:p, folder:{}, '@microsoft.graph.conflictBehavior':'replace'})});
-          if(!rr.ok) throw new Error('create_folder '+cur+' '+rr.status);
+  async function ensureFolderUnderRoot(token, path) {
+    let r = await fetch(`${GRAPH_BASE}/me/drive/root:/${encodeURIComponent(path)}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (r.status === 404) {
+      const parts = path.split('/');
+      let cur = '';
+      for (const p of parts) {
+        cur = cur ? (cur + '/' + p) : p;
+        let rr = await fetch(`${GRAPH_BASE}/me/drive/root:/${encodeURIComponent(cur)}`, { headers: { Authorization: `Bearer ${token}` } });
+        if (rr.status === 404) {
+          rr = await fetch(`${GRAPH_BASE}/me/drive/root/children`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: p, folder: {}, '@microsoft.graph.conflictBehavior': 'replace' })
+          });
+          if (!rr.ok) throw new Error('create_folder ' + cur + ' ' + rr.status);
         }
       }
-      r=await fetch(`${GRAPH_BASE}/me/drive/root:/${encodeURIComponent(path)}`,{headers:{Authorization:`Bearer ${token}`}});
+      r = await fetch(`${GRAPH_BASE}/me/drive/root:/${encodeURIComponent(path)}`, { headers: { Authorization: `Bearer ${token}` } });
     }
-    if(!r.ok) throw new Error('ensureFolder '+path+' '+r.status);
+    if (!r.ok) throw new Error('ensureFolder ' + path + ' ' + r.status);
     return r.json();
   }
 
-  async function cloudLoad(){
-    const token=await getToken();
-    try{
+  async function cloudLoad() {
+    const token = await getToken();
+    try {
       await getAppRoot(token);
-      const metaRes=await fetch(`${GRAPH_BASE}/me/drive/special/approot:/${CLOUD_FILE_NAME}`,{headers:{Authorization:`Bearer ${token}`}});
-      if(metaRes.status===404){ cloudETag=null; return null; }
-      if(!metaRes.ok) throw new Error('meta '+metaRes.status);
-      const meta=await metaRes.json();
-      cloudETag=meta.eTag||meta['@odata.etag']||null;
-      const r=await fetch(`${GRAPH_BASE}/me/drive/special/approot:/${CLOUD_FILE_NAME}:/content`,{headers:{Authorization:`Bearer ${token}`}});
-      if(!r.ok) throw new Error('download '+r.status);
-      const json=await r.json();
-      if(json&&json.payload){ window.state=json.payload; if(typeof window.saveState==='function') window.saveState(window.state); }
+      const metaRes = await fetch(`${GRAPH_BASE}/me/drive/special/approot:/${CLOUD_FILE_NAME}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (metaRes.status === 404) { cloudETag = null; updateStatus(); return null; }
+      if (!metaRes.ok) throw new Error('meta ' + metaRes.status);
+      const meta = await metaRes.json();
+      cloudETag = meta.eTag || meta['@odata.etag'] || null;
+
+      const r = await fetch(`${GRAPH_BASE}/me/drive/special/approot:/${CLOUD_FILE_NAME}:/content`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!r.ok) throw new Error('download ' + r.status);
+      const json = await r.json();
+      if (json && json.payload) {
+        window.state = json.payload;
+        if (typeof window.saveState === 'function') window.saveState(window.state);
+      }
       updateStatus();
       return json;
-    }catch(e){
+    } catch (e) {
       console.warn('AppFolder load fallita, provo fallback cartella dedicata', e);
     }
-    const folder=await ensureFolderUnderRoot(token,'Apps/BB-California-PMS');
-    const url=`${GRAPH_BASE}/me/drive/items/${folder.id}:/${CLOUD_FILE_NAME}`;
-    const m2=await fetch(url,{headers:{Authorization:`Bearer ${token}`}});
-    if(m2.status===404){ cloudETag=null; return null; }
-    if(!m2.ok) throw new Error('meta2 '+m2.status);
-    const meta2=await m2.json();
-    cloudETag=meta2.eTag||meta2['@odata.etag']||null;
-    const r2=await fetch(`${url}:/content`,{headers:{Authorization:`Bearer ${token}`}});
-    if(!r2.ok) throw new Error('download2 '+r2.status);
-    const json2=await r2.json();
-    if(json2&&json2.payload){ window.state=json2.payload; if(typeof window.saveState==='function') window.saveState(window.state); }
+
+    const folder = await ensureFolderUnderRoot(token, 'Apps/BB-California-PMS');
+    const url = `${GRAPH_BASE}/me/drive/items/${folder.id}:/${CLOUD_FILE_NAME}`;
+    const m2 = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (m2.status === 404) { cloudETag = null; updateStatus(); return null; }
+    if (!m2.ok) throw new Error('meta2 ' + m2.status);
+    const meta2 = await m2.json();
+    cloudETag = meta2.eTag || meta2['@odata.etag'] || null;
+
+    const r2 = await fetch(`${url}:/content`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!r2.ok) throw new Error('download2 ' + r2.status);
+    const json2 = await r2.json();
+    if (json2 && json2.payload) {
+      window.state = json2.payload;
+      if (typeof window.saveState === 'function') window.saveState(window.state);
+    }
     updateStatus();
     return json2;
   }
 
-  async function cloudSave(force){
-    const token=await getToken();
-    const envelope={version:1, updatedAt:nowISO(), payload:window.state};
-    const body=JSON.stringify(envelope);
-    try{
+  async function cloudSave(force) {
+    const token = await getToken();
+    const envelope = { version: 1, updatedAt: nowISO(), payload: window.state };
+    const body = JSON.stringify(envelope);
+
+    try {
       await getAppRoot(token);
-      const url=`${GRAPH_BASE}/me/drive/special/approot:/${CLOUD_FILE_NAME}:/content`;
-      const headers={Authorization:`Bearer ${token}`,'Content-Type':'application/json'};
-      if(cloudETag && !force) headers['If-Match']=cloudETag;
-      let r=await fetch(url,{method:'PUT', headers, body});
-      if(r.status===412 && !force){ await cloudLoad(); return false; }
-      if(!r.ok) throw new Error('upload '+r.status);
-      const meta=await r.json();
-      cloudETag=meta.eTag||meta['@odata.etag']||null;
-      await maybeAutoBackup(token,envelope);
+      const url = `${GRAPH_BASE}/me/drive/special/approot:/${CLOUD_FILE_NAME}:/content`;
+      const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+      if (cloudETag && !force) headers['If-Match'] = cloudETag;
+
+      let r = await fetch(url, { method: 'PUT', headers, body });
+      if (r.status === 412 && !force) { await cloudLoad(); return false; }
+      if (!r.ok) throw new Error('upload ' + r.status);
+      const meta = await r.json();
+      cloudETag = meta.eTag || meta['@odata.etag'] || null;
+
+      await maybeAutoBackup(token, envelope);
       updateStatus('Cloud: sincronizzato');
       return true;
-    }catch(e){ console.warn('AppFolder save fallita, provo fallback', e); }
+    } catch (e) {
+      console.warn('AppFolder save fallita, provo fallback', e);
+    }
 
-    const folder=await ensureFolderUnderRoot(token,'Apps/BB-California-PMS');
-    const url2=`${GRAPH_BASE}/me/drive/items/${folder.id}:/${CLOUD_FILE_NAME}:/content`;
-    const headers2={Authorization:`Bearer ${token}`,'Content-Type':'application/json'};
-    if(cloudETag && !force) headers2['If-Match']=cloudETag;
-    let r2=await fetch(url2,{method:'PUT', headers: headers2, body});
-    if(r2.status===412 && !force){ await cloudLoad(); return false; }
-    if(!r2.ok) throw new Error('upload2 '+r2.status);
-    const meta2=await r2.json();
-    cloudETag=meta2.eTag||meta2['@odata.etag']||null;
-    await maybeAutoBackup(token,envelope);
+    const folder = await ensureFolderUnderRoot(token, 'Apps/BB-California-PMS');
+    const url2 = `${GRAPH_BASE}/me/drive/items/${folder.id}:/${CLOUD_FILE_NAME}:/content`;
+    const headers2 = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+    if (cloudETag && !force) headers2['If-Match'] = cloudETag;
+
+    let r2 = await fetch(url2, { method: 'PUT', headers: headers2, body });
+    if (r2.status === 412 && !force) { await cloudLoad(); return false; }
+    if (!r2.ok) throw new Error('upload2 ' + r2.status);
+    const meta2 = await r2.json();
+    cloudETag = meta2.eTag || meta2['@odata.etag'] || null;
+
+    await maybeAutoBackup(token, envelope);
     updateStatus('Cloud: sincronizzato');
     return true;
   }
 
-  async function ensureBackupFolder(token){
-    try{
+  async function ensureBackupFolder(token) {
+    try {
       await getAppRoot(token);
-      let r=await fetch(`${GRAPH_BASE}/me/drive/special/approot:/Backups`,{headers:{Authorization:`Bearer ${token}`}});
-      if(r.status===404){
-        r=await fetch(`${GRAPH_BASE}/me/drive/special/approot/children`,{
-          method:'POST', headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
-          body: JSON.stringify({ name: 'Backups', folder:{}, '@microsoft.graph.conflictBehavior':'replace' })
+      let r = await fetch(`${GRAPH_BASE}/me/drive/special/approot:/Backups`, { headers: { Authorization: `Bearer ${token}` } });
+      if (r.status === 404) {
+        r = await fetch(`${GRAPH_BASE}/me/drive/special/approot/children`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: 'Backups', folder: {}, '@microsoft.graph.conflictBehavior': 'replace' })
         });
       }
-      if(!r.ok) throw new Error('ensure_backups '+r.status);
+      if (!r.ok) throw new Error('ensure_backups ' + r.status);
       return 'approot';
-    }catch(e){ }
-    await ensureFolderUnderRoot(token,'Apps/BB-California-PMS/Backups');
+    } catch { /* fallback sotto */ }
+
+    await ensureFolderUnderRoot(token, 'Apps/BB-California-PMS/Backups');
     return 'root';
   }
 
-  async function cloudBackup(envelope){
-    const token=await getToken();
-    const where=await ensureBackupFolder(token);
-    const fname = `backup_${new Date().toISOString().replace(/[:]/g,'-').slice(0,19)}.json`;
+  async function cloudBackup(envelope) {
+    const token = await getToken();
+    const where = await ensureBackupFolder(token);
+    const fname = `backup_${new Date().toISOString().replace(/[:]/g, '-').slice(0, 19)}.json`;
     const body = JSON.stringify(envelope, null, 2);
-    if(where==='approot'){
-      const url=`${GRAPH_BASE}/me/drive/special/approot:/Backups/${fname}:/content`;
-      const r=await fetch(url,{method:'PUT', headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'}, body});
-      if(!r.ok) throw new Error('backup_put '+r.status);
+
+    if (where === 'approot') {
+      const url = `${GRAPH_BASE}/me/drive/special/approot:/Backups/${fname}:/content`;
+      const r = await fetch(url, { method: 'PUT', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body });
+      if (!r.ok) throw new Error('backup_put ' + r.status);
       return true;
-    }else{
-      const folder=await ensureFolderUnderRoot(token,'Apps/BB-California-PMS/Backups');
-      const url=`${GRAPH_BASE}/me/drive/items/${folder.id}:/Backups/${fname}:/content`;
-      const r=await fetch(url,{method:'PUT', headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'}, body});
-      if(!r.ok) throw new Error('backup_put2 '+r.status);
+    } else {
+      const folder = await ensureFolderUnderRoot(token, 'Apps/BB-California-PMS/Backups');
+      const url = `${GRAPH_BASE}/me/drive/items/${folder.id}:/Backups/${fname}:/content`;
+      const r = await fetch(url, { method: 'PUT', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body });
+      if (!r.ok) throw new Error('backup_put2 ' + r.status);
       return true;
     }
   }
 
-  async function maybeAutoBackup(token,envelope){
-    try{
-      const k='bb_pms_last_backup_ts';
-      const last=+(localStorage.getItem(k)||'0');
-      const now=Date.now();
-      if(now-last >= 60*60*1000){
+  async function maybeAutoBackup(token, envelope) {
+    try {
+      const k = 'bb_pms_last_backup_ts';
+      const last = +(localStorage.getItem(k) || '0');
+      const now = Date.now();
+      if (now - last >= 60 * 60 * 1000) {
         await cloudBackup(envelope);
         localStorage.setItem(k, String(now));
       }
-    }catch(e){ console.warn('Backup automatico fallito:', e); }
+    } catch (e) {
+      console.warn('Backup automatico fallito:', e);
+    }
   }
 
-  function exportLocalBackup(){
-    const envelope={version:1, exportedAt:nowISO(), payload:window.state};
-    const blob=new Blob([JSON.stringify(envelope, null, 2)],{type:'application/json'});
-    const a=document.createElement('a');
-    a.href=URL.createObjectURL(blob);
-    a.download=`bb_california_backup_${new Date().toISOString().replace(/[:]/g,'-').slice(0,19)}.json`;
+  function exportLocalBackup() {
+    const envelope = { version: 1, exportedAt: nowISO(), payload: window.state };
+    const blob = new Blob([JSON.stringify(envelope, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `bb_california_backup_${new Date().toISOString().replace(/[:]/g, '-').slice(0, 19)}.json`;
     a.click();
   }
 
-  function fullRerender(){
-    try{ if(typeof renderCalendar==='function') renderCalendar(); }catch(e){}
-    try{ if(typeof renderDashboard==='function') renderDashboard(); }catch(e){}
-    try{ if(typeof renderRooms==='function') renderRooms(); }catch(e){}
-    try{ if(typeof renderBookingsTable==='function') renderBookingsTable(); }catch(e){}
+  function fullRerender() {
+    try { if (typeof renderCalendar === 'function') renderCalendar(); } catch { }
+    try { if (typeof renderDashboard === 'function') renderDashboard(); } catch { }
+    try { if (typeof renderRooms === 'function') renderRooms(); } catch { }
+    try { if (typeof renderBookingsTable === 'function') renderBookingsTable(); } catch { }
   }
 
-  function patchSaveState(){
-    if(!window.saveState || window.saveState.__patched) return;
-    const _o=window.saveState;
-    window.saveState=function(s){
-      const ret=_o.call(this,s);
-      if(syncDebounceTimer) clearTimeout(syncDebounceTimer);
-      syncDebounceTimer=setTimeout(()=>{ cloudSave(false).catch(console.error); }, 1200);
+  function patchSaveState() {
+    if (!window.saveState || window.saveState.__patched) return;
+    const _o = window.saveState;
+    window.saveState = function (s) {
+      const ret = _o.call(this, s);
+      if (syncDebounceTimer) clearTimeout(syncDebounceTimer);
+      syncDebounceTimer = setTimeout(() => { cloudSave(false).catch(console.error); }, 1200);
       return ret;
     };
-    window.saveState.__patched=true;
+    window.saveState.__patched = true;
   }
 
-  document.addEventListener('DOMContentLoaded', async ()=>{
-    try{
+  document.addEventListener('DOMContentLoaded', async () => {
+    try {
       ensureToolbar();
       await injectScript(MSAL_CDN);
-      if(!window.msal){ alert('Impossibile caricare MSAL'); return; }
+      if (!window.msal) { alert('Impossibile caricare MSAL'); return; }
+
       initMsal();
       updateStatus();
-      const ready=await waitForAppReady();
-      if(ready) patchSaveState();
-      await signIn();
-      await cloudSave(false).catch(()=>{});
-    }catch(e){ console.error('CloudSync boot error', e); }
+
+      const ready = await waitForAppReady();
+      if (ready) patchSaveState();
+
+      await signIn();              // loginPopup
+      await cloudSave(false).catch(() => { }); // prima sync ottimistica
+    } catch (e) {
+      console.error('CloudSync boot error', e);
+    }
   });
 })();
