@@ -1,6 +1,7 @@
-// bb_pms_cloudsync.js — FIX v2: lazy-load MSAL, robust guards, redirect flow fallback
+// bb_pms_cloudsync.js — FIX v3: dual-CDN fallback (jsDelivr -> Microsoft CDN), lazy init, cookie storage
 (function(){
-  const MSAL_CDN = "https://cdn.jsdelivr.net/npm/@azure/msal-browser@latest/dist/msal-browser.min.js";
+  const CDN_JSDELIVR = "https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.2/dist/msal-browser.min.js";
+  const CDN_MS = "https://alcdn.msauth.net/browser/2.38.2/js/msal-browser.min.js"; // Microsoft CDN
   const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
   const CLOUD_FILE_NAME = "bb_california_pms.json";
   const CLIENT_ID = "ce6bed56-eb99-4999-9fca-95ade258cc3a";
@@ -18,8 +19,23 @@
   function injectScript(src){
     return new Promise((res, rej)=>{
       if (document.querySelector(`script[src='${src}']`)) { res(); return; }
-      const s=document.createElement('script'); s.src=src; s.async=true; s.onload=res; s.onerror=rej; document.head.appendChild(s);
+      const s=document.createElement('script');
+      s.src=src; s.defer=true; // defer to guarantee execution order
+      s.onload=res; s.onerror=()=>rej(new Error('load_failed:'+src));
+      document.head.appendChild(s);
     });
+  }
+
+  async function loadMsalFromAnyCdn(){
+    const order=[CDN_JSDELIVR, CDN_MS];
+    for (const url of order){
+      try{
+        await injectScript(url);
+        // attende che il browser esegua il bundle e pubblichi window.msal
+        for (let i=0;i<20;i++){ if (window.msal) return url; await delay(25); }
+      }catch(e){ console.warn('MSAL load error:', e && e.message || e); }
+    }
+    return null;
   }
 
   function ensureToolbar(){
@@ -27,25 +43,9 @@
     const bar=document.createElement('div');
     bar.id='cloudToolbar';
     bar.className='d-flex align-items-center gap-2 p-2 border-bottom';
-    bar.style.background='rgba(255,255,255,.9)';
-    bar.style.backdropFilter='blur(6px)';
-    bar.innerHTML=`<div class="d-flex flex-wrap align-items-center gap-2 w-100">
-      <span id="cloudStatus" class="small text-muted">Cloud: non connesso</span>
-      <div class="ms-auto d-flex gap-2">
-        <button id="btnSignIn" class="btn btn-sm btn-primary" disabled>Accedi</button>
-        <button id="btnSignOut" class="btn btn-sm btn-outline-secondary">Esci</button>
-        <button id="btnSyncNow" class="btn btn-sm btn-outline-primary">Sincronizza ora</button>
-        <div class="btn-group">
-          <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">Avanzate</button>
-          <ul class="dropdown-menu dropdown-menu-end">
-            <li><a class="dropdown-item" href="#" id="btnCloudLoad">Carica dal cloud (forza)</a></li>
-            <li><a class="dropdown-item" href="#" id="btnExportJSON">Esporta backup JSON</a></li>
-          </ul>
-        </div>
-      </div>
-    </div>`;
+    bar.style.background='rgba(255,255,255,.9)'; bar.style.backdropFilter='blur(6px)';
+    bar.innerHTML=`<div class=\"d-flex flex-wrap align-items-center gap-2 w-100\">\n      <span id=\"cloudStatus\" class=\"small text-muted\">Cloud: non connesso</span>\n      <div class=\"ms-auto d-flex gap-2\">\n        <button id=\"btnSignIn\" class=\"btn btn-sm btn-primary\" disabled>Accedi</button>\n        <button id=\"btnSignOut\" class=\"btn btn-sm btn-outline-secondary\">Esci</button>\n        <button id=\"btnSyncNow\" class=\"btn btn-sm btn-outline-primary\">Sincronizza ora</button>\n        <div class=\"btn-group\">\n          <button class=\"btn btn-sm btn-outline-secondary dropdown-toggle\" data-bs-toggle=\"dropdown\">Avanzate</button>\n          <ul class=\"dropdown-menu dropdown-menu-end\">\n            <li><a class=\"dropdown-item\" href=\"#\" id=\"btnCloudLoad\">Carica dal cloud (forza)</a></li>\n            <li><a class=\"dropdown-item\" href=\"#\" id=\"btnExportJSON\">Esporta backup JSON</a></li>\n          </ul>\n        </div>\n      </div>\n    </div>`;
     const anchor=document.querySelector('#topbar')||document.body.firstElementChild; (anchor&&anchor.parentNode?anchor.parentNode:document.body).insertBefore(bar, anchor?anchor.nextSibling:null);
-
     document.getElementById('btnSignIn').onclick = signIn;
     document.getElementById('btnSignOut').onclick = () => { try{ const acc=msalInstance && msalInstance.getAllAccounts ? msalInstance.getAllAccounts()[0] : null; if(acc && msalInstance) msalInstance.logoutPopup({account:acc}); }catch{} updateStatus(); };
     document.getElementById('btnSyncNow').onclick = async()=>{ try{ await cloudSave(true); alert('Sync completata'); }catch(e){ alert('Errore sync: '+e.message);} };
@@ -57,20 +57,19 @@
 
   async function ensureMsal(){
     if (msalReady && msalInstance) return true;
-    await injectScript(MSAL_CDN).catch(()=>{});
+    const used = await loadMsalFromAnyCdn();
     if (!window.msal){ console.warn('MSAL non caricato'); return false; }
     try{
       msalInstance = new msal.PublicClientApplication({
         auth:{ clientId: CLIENT_ID, authority: "https://login.microsoftonline.com/common", redirectUri: REDIRECT },
-        cache:{ cacheLocation:"sessionStorage", storeAuthStateInCookie: true } // cookie true per anti-tracking
+        cache:{ cacheLocation:"sessionStorage", storeAuthStateInCookie: true }
       });
-      // processa eventuale redirect
       if (typeof msalInstance.handleRedirectPromise === 'function') {
         try { await msalInstance.handleRedirectPromise(); } catch(e){ console.warn('handleRedirectPromise', e); }
       }
-      msalReady = true;
-      const btn=document.getElementById('btnSignIn'); if(btn) btn.disabled=false;
+      msalReady = true; const btn=document.getElementById('btnSignIn'); if(btn) btn.disabled=false;
       updateStatus();
+      console.log('MSAL ready via', used);
       return true;
     }catch(e){ console.error('Init MSAL error', e); return false; }
   }
@@ -80,25 +79,18 @@
       const ok = await ensureMsal();
       if (!ok){ alert('MSAL non è pronto. Ricarica la pagina e riprova.'); return; }
       const scopes=["User.Read","openid","profile","offline_access","Files.ReadWrite.AppFolder"];
-      let acc = null;
-      try{ acc = msalInstance.getAllAccounts()[0]; }catch(e){ console.warn('getAllAccounts error', e); }
+      let acc = null; try{ acc = msalInstance.getAllAccounts()[0]; }catch(e){ console.warn('getAllAccounts error', e); }
       if(!acc){
-        // Popup può essere bloccato da Tracking Prevention: prova redirect se popup fallisce
         try{ await msalInstance.loginPopup({scopes}); }
         catch(e){ console.warn('loginPopup fallito, provo redirect', e); msalInstance.loginRedirect({scopes}); return; }
       }
-      updateStatus();
-      await cloudLoad();
-      fullRerender();
-      startAutoRefresh();
+      updateStatus(); await cloudLoad(); fullRerender(); startAutoRefresh();
     }catch(e){ console.error(e); alert('Login/Cloud load fallito: '+e.message); }
   }
 
   function startAutoRefresh(){ try{ if(autoRefreshTimer) clearInterval(autoRefreshTimer);}catch{} autoRefreshTimer=setInterval(async()=>{ try{ const prev=cloudETag; const data=await cloudLoad(); if(data && cloudETag!==prev) fullRerender(); }catch(e){ console.warn('Auto-refresh error:', e);} }, 3*60*1000); }
 
-  async function getToken(scopes){ scopes=scopes||["User.Read","openid","profile","offline_access","Files.ReadWrite.AppFolder"]; const acc=(msalInstance&&msalInstance.getAllAccounts)?msalInstance.getAllAccounts()[0]:null; if(!acc){ // prova a loggarti
-      await signIn(); throw new Error('no_account'); }
-    try{ const res=await msalInstance.acquireTokenSilent({scopes, account: acc}); return res.accessToken; }catch(e){ const res=await msalInstance.acquireTokenPopup({scopes}).catch(()=>{ msalInstance.loginRedirect({scopes}); }); if(!res) throw new Error('token_via_redirect'); return res.accessToken; } }
+  async function getToken(scopes){ scopes=scopes||["User.Read","openid","profile","offline_access","Files.ReadWrite.AppFolder"]; const acc=(msalInstance&&msalInstance.getAllAccounts)?msalInstance.getAllAccounts()[0]:null; if(!acc){ await signIn(); throw new Error('no_account'); } try{ const res=await msalInstance.acquireTokenSilent({scopes, account: acc}); return res.accessToken; }catch(e){ const res=await msalInstance.acquireTokenPopup({scopes}).catch(()=>{ msalInstance.loginRedirect({scopes}); }); if(!res) throw new Error('token_via_redirect'); return res.accessToken; } }
 
   async function getAppRoot(token){ const r=await fetch(`${GRAPH_BASE}/me/drive/special/approot`,{headers:{Authorization:`Bearer ${token}`}}); if(!r.ok) throw new Error('approot '+r.status); return r.json(); }
 
@@ -121,11 +113,6 @@
   function patchSaveState(){ if(!window.saveState || window.saveState.__patched) return; const _o=window.saveState; window.saveState=function(s){ const ret=_o.call(this,s); if(syncDebounceTimer) clearTimeout(syncDebounceTimer); syncDebounceTimer=setTimeout(()=>{ cloudSave(false).catch(console.error); },1200); return ret; }; window.saveState.__patched=true; }
 
   document.addEventListener('DOMContentLoaded', async ()=>{
-    try{
-      ensureToolbar();
-      // lazy: non forziamo il login automatico; prepariamo solo MSAL
-      const ok = await ensureMsal();
-      if (ok) patchSaveState();
-    }catch(e){ console.error('CloudSync boot error', e); }
+    try{ ensureToolbar(); const ok = await ensureMsal(); if (ok) patchSaveState(); }catch(e){ console.error('CloudSync boot error', e); }
   });
 })();
